@@ -1,0 +1,15 @@
+batch_size: 64
+batch_size_train: 64
+config_type: correlation
+cutout: false
+cutout_length: 16
+cutout_prob: 1.0
+dataset: cifar10
+out_dir: proxydiff_nb301_refinement
+predictor: nwot
+auto_augment: true
+search_space: nasbench301
+seed: 9000
+test_size: 1000
+train_portion: 0.7
+train_portion_half: 0.5
