@@ -20,6 +20,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import torch
 
 
 ALL_19_PROXIES = [
@@ -239,6 +240,7 @@ def factorize_proxy_matrix(
     *,
     apply_gate: bool,
     cache_layout: str,
+    cache_device: str,
 ) -> tuple[list[np.ndarray], dict[str, object]]:
     if cache_layout not in {"prior_axes", "readout_axes", "readout_prior_axes"}:
         raise ValueError(f"Unknown cache_layout: {cache_layout}")
@@ -272,6 +274,7 @@ def factorize_proxy_matrix(
     orient_names = [name for name in AXIS_ORIENTATION_PROXIES if name in proxy_lookup] or list(retained_names)
 
     profiles = []
+    pre_oriented_axes = []
     oriented_axes = []
     axis_meta = []
     for axis_id in range(1, comp.shape[1]):
@@ -280,6 +283,7 @@ def factorize_proxy_matrix(
         direction = 1.0 if profile.size == 0 or profile[strongest_idx] >= 0 else -1.0
         oriented_profile = direction * profile
         profiles.append((axis_id, oriented_profile))
+        pre_oriented_axes.append(comp[:, axis_id])
         oriented_axes.append(comp[:, axis_id] * direction)
         axis_meta.append(
             {
@@ -293,10 +297,26 @@ def factorize_proxy_matrix(
         )
 
     axis_matrix = np.column_stack(oriented_axes) if oriented_axes else np.zeros((raw.shape[0], 0), dtype=float)
-    readout = (prior[:, 0] + axis_matrix.sum(axis=1)) / (1.0 + float(axis_matrix.shape[1]))
+    denom = 1.0 + float(axis_matrix.shape[1])
+    prior_tensor = torch.tensor(prior[:, 0].astype(np.float32).reshape(2, 14, 7), device=cache_device)
+    readout_cells = [prior_tensor[cell].clone() for cell in range(prior_tensor.shape[0])]
+    axis_cells = []
+    for j, axis in enumerate(pre_oriented_axes):
+        axis_tensor = torch.tensor(axis.astype(np.float32).reshape(2, 14, 7), device=cache_device)
+        direction = float(axis_meta[j]["direction"])
+        cells = [axis_tensor[cell].clone() for cell in range(axis_tensor.shape[0])]
+        for cell in range(len(cells)):
+            cells[cell] = cells[cell] * direction
+        axis_cells.append(cells)
+    for cell in range(len(readout_cells)):
+        readout_cells[cell] = readout_cells[cell] / denom
+    for cells in axis_cells:
+        for cell in range(len(readout_cells)):
+            readout_cells[cell] = readout_cells[cell] + cells[cell] / denom
+    readout = torch.stack(readout_cells, dim=0).detach().cpu().numpy().reshape(-1)
     axes_only = [axis_matrix[:, j] for j in range(axis_matrix.shape[1])]
     if cache_layout == "prior_axes":
-        cache_vectors = [prior[:, 0]] + axes_only
+        cache_vectors = [prior[:, 0]] + [axis for axis in pre_oriented_axes]
     elif cache_layout == "readout_axes":
         cache_vectors = [readout] + axes_only
     else:
@@ -306,6 +326,7 @@ def factorize_proxy_matrix(
         "proxy_names": proxy_names,
         "apply_gate": bool(apply_gate),
         "cache_layout": cache_layout,
+        "cache_device": cache_device,
         "gate_utility_raw": gate_utilities.tolist(),
         "gate_utility_reweighted": reweighted.tolist(),
         "gate_kept_names": [proxy_names[i] for i in gate_kept],
@@ -329,13 +350,13 @@ def factorize_proxy_matrix(
     return cache_vectors, meta
 
 
-def write_refinement_cache(path: Path, vectors: list[np.ndarray]) -> None:
+def write_refinement_cache(path: Path, vectors: list[np.ndarray], cache_device: str) -> None:
     import torch
 
     cache = []
     for vec in vectors:
         arr = np.asarray(vec, dtype=np.float32).reshape(2, 14, 7)
-        cache.append([[torch.tensor(arr[0]), torch.tensor(arr[1])]])
+        cache.append([[torch.tensor(arr[0], device=cache_device), torch.tensor(arr[1], device=cache_device)]])
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(cache, path)
 
@@ -348,6 +369,7 @@ def build_proxy_set(
     *,
     apply_gate: bool,
     cache_layout: str,
+    cache_device: str,
 ) -> dict[str, object]:
     raw, input_meta = load_operation_scores(op_root, proxies)
     proxy_names = [f"zcpt_{_clean_name(p)}" for p in proxies]
@@ -356,9 +378,10 @@ def build_proxy_set(
         proxy_names,
         apply_gate=apply_gate,
         cache_layout=cache_layout,
+        cache_device=cache_device,
     )
     cache_path = out_dir / f"{proxy_set_name}_proxydiff_cache.pt"
-    write_refinement_cache(cache_path, vectors)
+    write_refinement_cache(cache_path, vectors, cache_device)
     details = {
         "proxy_set": proxy_set_name,
         "proxies": proxy_names,
@@ -383,9 +406,18 @@ def main() -> None:
         default="both",
         help="Proxy set to convert into a ProxyDiff refinement cache.",
     )
+    parser.add_argument(
+        "--cache-device",
+        choices=["auto", "cpu", "cuda"],
+        default="auto",
+        help="Tensor device used while writing score caches; auto uses CUDA when available.",
+    )
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    cache_device = "cuda" if args.cache_device == "auto" and torch.cuda.is_available() else args.cache_device
+    if cache_device == "cuda" and not torch.cuda.is_available():
+        cache_device = "cpu"
     rows = []
     if args.proxy_set in {"full_proxy_pool", "both"}:
         rows.append(
@@ -396,6 +428,7 @@ def main() -> None:
                 ALL_19_PROXIES,
                 apply_gate=True,
                 cache_layout="readout_axes",
+                cache_device=cache_device,
             )
         )
     if args.proxy_set in {"utility_gated_pool", "both"}:
@@ -407,6 +440,7 @@ def main() -> None:
                 FINAL_8_PROXIES,
                 apply_gate=False,
                 cache_layout="prior_axes",
+                cache_device=cache_device,
             )
         )
     if args.proxy_set in {"three_proxy_subset", "both"}:
@@ -418,6 +452,7 @@ def main() -> None:
                 FINAL_3_PROXIES,
                 apply_gate=False,
                 cache_layout="readout_prior_axes",
+                cache_device=cache_device,
             )
         )
 

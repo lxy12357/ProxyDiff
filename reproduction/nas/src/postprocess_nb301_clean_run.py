@@ -136,8 +136,10 @@ def resolve_run_marker(marker_text: str, nas_runtime_root: Path) -> Path:
 
 
 def postprocess_proxy_set(out_root: Path, proxy_set: str, nas_runtime_root: Path) -> dict[str, Any]:
+    old_focus_suffix = "axis_" + "calib_" + "para"
     run_names = [
-        f"proxydiff_nb301_refinement_{proxy_set}_proxydiff_{proxy_set}_focus5_after_axis_calib_para_steps200",
+        f"proxydiff_nb301_refinement_{proxy_set}_proxydiff_{proxy_set}_focus5_after_axis_calibration_steps200",
+        f"proxydiff_nb301_refinement_{proxy_set}_proxydiff_{proxy_set}_focus5_after_{old_focus_suffix}_steps200",
     ]
     nas_runtime_run_roots = [nas_runtime_root / name for name in run_names]
     latest = None

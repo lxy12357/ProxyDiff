@@ -104,7 +104,7 @@ run_refinement() {
   local proxy_set="$1"
   local cache="$OUT_ROOT/caches/${proxy_set}_proxydiff_cache.pt"
   local base_cfg="$NAS_CONFIG_DIR/nb301_proxy_refinement.yaml"
-  local tag="proxydiff_${proxy_set}_focus5_after_axis_calib_para_steps200"
+  local tag="proxydiff_${proxy_set}_focus5_after_axis_calibration_steps200"
   local run_name="proxydiff_nb301_refinement_${proxy_set}_${tag}"
   local config_dir="${NAS_RUNTIME_CONFIG_DIR:-configs/proxydiff_reproduction}"
   local cfg="${config_dir}/proxydiff_nb301_refinement_${proxy_set}_${tag}.yaml"
@@ -122,9 +122,9 @@ run_refinement() {
   RESIDUAL_AXIS_SCALE=1.0
   COMPONENT_CORR_PARA_AXIS_SCALE=1.0
   AXIS_CALIB_PARA_STEPS=100
-  FOCUS_MASK_POLICY=topk_after_axis_calib_para
+  FOCUS_MASK_POLICY=topk_after_axis_calibration
   FOCUS_MASK_TOPK=5
-  FOCUS_MASK_SOURCE=axis_calib_para
+  FOCUS_MASK_SOURCE=axis_calibrated_score
   EVALUATE_INITIAL_SCORE=1
   INITIAL_SCORE_ONLY=0
   SAVE_STAGE_ARTIFACTS=1
@@ -176,7 +176,26 @@ run_refinement() {
   cd "$REPRO"
 }
 
-run_refinement full_proxy_pool
+run_full_refinement_with_companion() {
+  if [[ "${ENABLE_FULL_REFINEMENT_COMPANION:-1}" != "1" ]]; then
+    run_refinement full_proxy_pool
+    return 0
+  fi
+
+  local delay_seconds="${FULL_REFINEMENT_COMPANION_DELAY_SECONDS:-120}"
+  echo "===== launch full-row companion refinement START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
+  (
+    run_refinement utility_gated_pool
+  ) &
+  local companion_pid=$!
+  echo "full-row companion pid=$companion_pid delay_seconds=$delay_seconds" | tee -a "$LOG_ROOT/master.log"
+  sleep "$delay_seconds"
+  run_refinement full_proxy_pool
+  wait "$companion_pid"
+  echo "===== launch full-row companion refinement DONE $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
+}
+
+run_full_refinement_with_companion
 run_refinement three_proxy_subset
 
 echo "===== ProxyDiff NB301 pipeline DONE $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"

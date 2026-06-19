@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Re-evaluate ProxyDiff refinement artifacts by their free discrete NB301 architecture.
 
-This is different from the fixed1000 candidate-selection diagnostic.  It uses
+This is different from fixed-pool candidate selection.  It uses
 the saved cell/edge/op score matrix, discretizes an NB301 architecture from
 that matrix, queries the selected architecture accuracy, and then maps that
 accuracy to an equivalent rank within the fixed1000 pool.

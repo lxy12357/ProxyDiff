@@ -55,6 +55,9 @@ REFINEMENT_PY=/path/to/refinement/python \
 bash reproduction/nas/scripts/run_nb301_pipeline.sh 0
 ```
 
+The cache writer uses `--cache-device auto` by default, which writes CUDA
+tensors when CUDA is available and falls back to CPU otherwise.
+
 Rerun only task-conditioned refinement from an existing ProxyDiff cache:
 
 ```bash
@@ -62,9 +65,8 @@ bash reproduction/nas/scripts/run_nb301_refine_from_cache.sh full_proxy_pool /pa
 ```
 
 Set `STRICT_HISTORICAL_ENV=1` to use only the core environment knobs recorded
-for the historical rank-1 NB301 run plus the paper learning rates.  This is the
-clean isolation path for debugging rank-1 refinement reproducibility when the
-score/cache has already been verified.
+for the NB301 run plus the paper learning rates.  This is an isolation path for
+rerunning refinement when the score/cache has already been verified.
 
 Summarize paper-row evidence:
 

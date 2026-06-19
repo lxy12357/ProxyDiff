@@ -7,6 +7,7 @@ import collections.abc
 import gc
 import json
 import math
+import os
 import random
 import sys
 import types
@@ -21,7 +22,10 @@ import torchvision.transforms as transforms
 
 
 WORKTREE = Path(__file__).resolve().parents[3]
-if (WORKTREE.parent / "upstream_zero_cost_pt").exists():
+ENV_DEP_ROOT = os.environ.get("PROXYDIFF_NAS_DEP_ROOT")
+if ENV_DEP_ROOT:
+    REPRO_ROOT = Path(ENV_DEP_ROOT).expanduser().resolve()
+elif (WORKTREE.parent / "upstream_zero_cost_pt").exists():
     REPRO_ROOT = WORKTREE.parent
 elif (WORKTREE / "Reproduction" / "upstream_zero_cost_pt").exists():
     REPRO_ROOT = WORKTREE / "Reproduction"
