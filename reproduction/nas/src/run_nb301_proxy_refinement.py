@@ -7,9 +7,11 @@ provides the DARTS search space, data loaders, and NB301 surrogate API.
 """
 import logging
 import os
+import random
 import shutil
 import sys
 
+import numpy as np
 import torch
 
 NAS_RUNTIME_PACKAGE_ROOT = os.environ.get(
@@ -49,6 +51,54 @@ def close_logger(logger):
     for handler in logger.handlers[:]:
         handler.close()
         logger.removeHandler(handler)
+
+
+def enable_deterministic_refinement(seed):
+    """Make the refinement feedback loop reproducible when requested."""
+    if os.environ.get("PROXYDIFF_DETERMINISTIC_REFINEMENT", "0").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    try:
+        torch.use_deterministic_algorithms(True, warn_only=True)
+    except TypeError:
+        torch.use_deterministic_algorithms(True)
+
+
+def install_fixed_subset_sampler():
+    """Optionally decouple CIFAR batch order from global torch RNG state."""
+    sampler_seed = os.environ.get("PROXYDIFF_FIXED_SAMPLER_SEED")
+    if sampler_seed is None or sampler_seed.strip().lower() in {"", "none", "off", "0"}:
+        return
+
+    base_seed = int(sampler_seed)
+    original_sampler = torch.utils.data.sampler.SubsetRandomSampler
+
+    class FixedSubsetRandomSampler(original_sampler):
+        def __init__(self, indices, generator=None):
+            super().__init__(indices, generator=generator)
+            self._proxydiff_iter_count = 0
+
+        def __iter__(self):
+            generator = torch.Generator()
+            generator.manual_seed(base_seed + self._proxydiff_iter_count)
+            self._proxydiff_iter_count += 1
+            for i in torch.randperm(len(self.indices), generator=generator):
+                yield self.indices[i]
+
+    torch.utils.data.sampler.SubsetRandomSampler = FixedSubsetRandomSampler
 
 
 def apply_evaluator_compat_env():
@@ -127,6 +177,8 @@ metric_mode = int(
 
 config = utils.get_config_from_args()
 utils.set_seed(config.seed)
+enable_deterministic_refinement(config.seed)
+install_fixed_subset_sampler()
 
 if config.search_space == "nasbench301":
     fixed_arch = (

@@ -136,6 +136,8 @@ run_refinement() {
   MAX_REFINEMENT_STEPS=200
   DISABLE_EDGE_NORMALIZATION=true
   EVALUATE_DECODE_VARIANTS=1
+  PROXYDIFF_DETERMINISTIC_REFINEMENT="${PROXYDIFF_DETERMINISTIC_REFINEMENT:-1}"
+  PROXYDIFF_FIXED_SAMPLER_SEED="${PROXYDIFF_FIXED_SAMPLER_SEED:-}"
 
   export PROXYDIFF_REFINEMENT_CACHE="$REFINEMENT_SCORE_CACHE"
   export REFINEMENT_OBJECTIVE
@@ -158,6 +160,8 @@ run_refinement() {
   export MAX_REFINEMENT_STEPS
   export DISABLE_EDGE_NORMALIZATION
   export EVALUATE_DECODE_VARIANTS
+  export PROXYDIFF_DETERMINISTIC_REFINEMENT
+  export PROXYDIFF_FIXED_SAMPLER_SEED
 
   echo "===== refine $proxy_set START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
   LD_LIBRARY_PATH="$REFINEMENT_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" "$REFINEMENT_PY" "$NAS_SRC_DIR/run_nb301_proxy_refinement.py" --config-file "$cfg" > "$log" 2>&1
@@ -176,26 +180,7 @@ run_refinement() {
   cd "$REPRO"
 }
 
-run_full_refinement_with_companion() {
-  if [[ "${ENABLE_FULL_REFINEMENT_COMPANION:-1}" != "1" ]]; then
-    run_refinement full_proxy_pool
-    return 0
-  fi
-
-  local delay_seconds="${FULL_REFINEMENT_COMPANION_DELAY_SECONDS:-120}"
-  echo "===== launch full-row companion refinement START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
-  (
-    run_refinement utility_gated_pool
-  ) &
-  local companion_pid=$!
-  echo "full-row companion pid=$companion_pid delay_seconds=$delay_seconds" | tee -a "$LOG_ROOT/master.log"
-  sleep "$delay_seconds"
-  run_refinement full_proxy_pool
-  wait "$companion_pid"
-  echo "===== launch full-row companion refinement DONE $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
-}
-
-run_full_refinement_with_companion
+run_refinement full_proxy_pool
 run_refinement three_proxy_subset
 
 echo "===== ProxyDiff NB301 pipeline DONE $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"

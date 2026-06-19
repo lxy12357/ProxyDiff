@@ -57,6 +57,8 @@ bash reproduction/nas/scripts/run_nb301_pipeline.sh 0
 
 The cache writer uses `--cache-device auto` by default, which writes CUDA
 tensors when CUDA is available and falls back to CPU otherwise.
+The refinement runner enables deterministic CUDA settings by default and leaves
+the original sampler order unchanged.
 
 Rerun only task-conditioned refinement from an existing ProxyDiff cache:
 
