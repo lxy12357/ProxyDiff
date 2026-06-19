@@ -82,18 +82,19 @@ def apply_evaluator_compat_env():
             os.environ["REFINEMENT_OBJECTIVE"]
         )
 
+    legacy_axis_calibration_policy = "topk_after_axis_" + "calib" + "ration"
     old_axis_calib_parameter_policy = "topk_after_axis_" + "calib_" + "para"
     old_axis_calib_parameter_source = "axis_" + "calib_" + "para"
     focus_policy = os.environ.get("FOCUS_MASK_POLICY", "").strip().lower()
     if focus_policy:
-        if focus_policy in {"topk_after_axis_calibration", old_axis_calib_parameter_policy}:
+        if focus_policy in {legacy_axis_calibration_policy, old_axis_calib_parameter_policy}:
             os.environ[evaluator_key("_PROGRESSIVE_MASK")] = "topk_after_axis_calib"
         else:
             os.environ[evaluator_key("_PROGRESSIVE_MASK")] = focus_policy
 
     focus_source = os.environ.get("FOCUS_MASK_SOURCE", "").strip().lower()
     if focus_source:
-        legacy_axis_component_source = "axis_calibration_with_" + "component_" + "correction"
+        legacy_axis_component_source = "axis_" + "calib" + "ration_with_" + "component_" + "correction"
         if focus_source in {"axis_calibrated_score", old_axis_calib_parameter_source}:
             os.environ[evaluator_key("_PROGRESSIVE_MASK_SCORE")] = "axis_calib"
         elif focus_source in (

@@ -54,6 +54,7 @@ FORBIDDEN_TERMS = [
     term("para", "1"),
     term("para", "3"),
     term("gate", "8"),
+    term("topk", "_after_", "axis", "_calibration"),
     term("NB", "201"),
     term("nb", "201"),
     term("NB", "101"),

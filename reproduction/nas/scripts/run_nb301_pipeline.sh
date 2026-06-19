@@ -104,7 +104,7 @@ run_refinement() {
   local proxy_set="$1"
   local cache="$OUT_ROOT/caches/${proxy_set}_proxydiff_cache.pt"
   local base_cfg="$NAS_CONFIG_DIR/nb301_proxy_refinement.yaml"
-  local tag="proxydiff_${proxy_set}_focus5_after_axis_calibration_steps200"
+  local tag="proxydiff_${proxy_set}_focus5_after_axis_calib_para_steps200"
   local run_name="proxydiff_nb301_refinement_${proxy_set}_${tag}"
   local config_dir="${NAS_RUNTIME_CONFIG_DIR:-configs/proxydiff_reproduction}"
   local cfg="${config_dir}/proxydiff_nb301_refinement_${proxy_set}_${tag}.yaml"
@@ -122,7 +122,7 @@ run_refinement() {
   RESIDUAL_AXIS_SCALE=1.0
   COMPONENT_CORR_PARA_AXIS_SCALE=1.0
   AXIS_CALIB_PARA_STEPS=100
-  FOCUS_MASK_POLICY=topk_after_axis_calibration
+  FOCUS_MASK_POLICY=topk_after_axis_calib_para
   FOCUS_MASK_TOPK=5
   FOCUS_MASK_SOURCE=axis_calibrated_score
   EVALUATE_INITIAL_SCORE=1
