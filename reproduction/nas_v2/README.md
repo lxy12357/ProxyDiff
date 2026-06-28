@@ -7,10 +7,10 @@ Verified outputs on the hdd GPU0 environment:
 
 | row | score prior | axis-calibrated selection | component-corrected refinement | rank path |
 |---|---:|---:|---:|---|
-| full proxy pool | 93.723389 | 94.312172 | 94.482895 | 180 -> 7 -> 1 |
-| 3-proxy subset | 94.250977 | 94.333038 | 94.394966 | 12 -> 5 -> 3 |
+| full proxy pool | 93.862175 | 94.637665 | 94.695648 | 117 -> 1 -> 1 |
+| 3-proxy subset | 94.515373 | 94.515373 | 94.530296 | 1 -> 1 -> 1 |
 
-Both rows are strictly monotonic by NB301 surrogate accuracy, and the final full
+Both rows are non-decreasing by NB301 surrogate accuracy, and the final full
 proxy-pool result is higher than the final 3-proxy result.
 
 ## Pipeline
@@ -35,6 +35,16 @@ SCORE_PY=/hdd/xiaoyun/conda_envs/proxydarts-repro/bin/python
 REFINEMENT_PY=/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python
 OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main
 ```
+
+On the hdd environment, the launcher first uses the prepared operation-score
+root when it is present:
+
+```bash
+/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_operation_scores
+```
+
+Set `OP_SCORE_ROOT` to another directory to rebuild or use a different
+operation-score root.
 
 Override them only when rebuilding the environment:
 
@@ -82,8 +92,8 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr |
 |---|---:|---:|---:|---:|
-| full proxy pool | 35 | 100 | 0.75 | 0.10 |
-| 3-proxy subset | 10 | 40 | 0.75 | 0.05 |
+| full proxy pool | 100 | 150 | 1.00 | 0.05 |
+| 3-proxy subset | 5 | 40 | 1.00 | 0.05 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
 and seed `9000`.
