@@ -87,7 +87,7 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr |
 |---|---:|---:|---:|---:|
 | full proxy pool | 50 | 115 | 1.00 | 0.10 |
-| 3-proxy subset | 10 | 45 | 0.45 | 0.025 |
+| 3-proxy subset | 10 | 45 | 0.50 | 0.025 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
 and seed `9000`.
