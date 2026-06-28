@@ -212,7 +212,11 @@ def load_operation_scores(op_root: Path, proxies: list[str]) -> tuple[np.ndarray
     metadata = {}
     for proxy in proxies:
         name = _clean_name(proxy)
-        path = op_root / f"nb301_official_zcpt_{name}" / "operation_scores.json"
+        candidates = [
+            op_root / f"nb301_zcpt_{name}" / "operation_scores.json",
+            op_root / f"nb301_official_zcpt_{name}" / "operation_scores.json",
+        ]
+        path = next((item for item in candidates if item.exists()), candidates[0])
         payload = json.loads(path.read_text(encoding="utf-8"))
         tensor = np.full((2, 14, 7), np.nan, dtype=float)
         cell_map = {"normal": 0, "reduce": 1}
@@ -407,6 +411,16 @@ def main() -> None:
         help="Proxy set to convert into a ProxyDiff refinement cache.",
     )
     parser.add_argument(
+        "--custom-proxy-set-name",
+        default=None,
+        help="Name for a fixed custom proxy subset cache.",
+    )
+    parser.add_argument(
+        "--custom-proxies",
+        default=None,
+        help="Space-separated proxy names for a fixed custom subset.",
+    )
+    parser.add_argument(
         "--cache-device",
         choices=["auto", "cpu", "cuda"],
         default="auto",
@@ -419,6 +433,28 @@ def main() -> None:
     if cache_device == "cuda" and not torch.cuda.is_available():
         cache_device = "cpu"
     rows = []
+    if args.custom_proxy_set_name or args.custom_proxies:
+        if not args.custom_proxy_set_name or not args.custom_proxies:
+            raise SystemExit("--custom-proxy-set-name and --custom-proxies must be provided together")
+        rows.append(
+            build_proxy_set(
+                args.op_root,
+                args.out_dir,
+                args.custom_proxy_set_name,
+                args.custom_proxies.split(),
+                apply_gate=False,
+                cache_layout="readout_prior_axes",
+                cache_device=cache_device,
+            )
+        )
+        manifest = {
+            "description": "ProxyDiff NB301 custom fixed-subset cache generated from ZCPT operation-ablation scores",
+            "op_root": str(args.op_root),
+            "rows": rows,
+        }
+        (args.out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        print(json.dumps({"out_dir": str(args.out_dir), "proxy_sets": [r["proxy_set"] for r in rows]}, indent=2))
+        return
     if args.proxy_set in {"full_proxy_pool", "both"}:
         rows.append(
             build_proxy_set(

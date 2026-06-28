@@ -111,7 +111,7 @@ def ensure_torch_six() -> None:
     sys.modules["torch._six"] = shim
 
 
-def ensure_legacy_torch_apis() -> None:
+def ensure_torch_compat_apis() -> None:
     def _symeig(x, eigenvectors=False, upper=True):
         if eigenvectors:
             return torch.linalg.eigh(x, UPLO="U" if upper else "L")
@@ -127,6 +127,22 @@ def ensure_simplejson_shim() -> None:
     shim = types.ModuleType("simplejson")
     shim.__dict__.update(json.__dict__)
     sys.modules["simplejson"] = shim
+
+
+def env_flag(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def configure_reproducible_backend(method: str) -> None:
+    """Set backend flags for repeatable NB301 ZCPT score computation."""
+    _ = method
+    torch.backends.cudnn.benchmark = env_flag("PROXYDIFF_CUDNN_BENCHMARK", True)
+    torch.backends.cudnn.deterministic = env_flag("PROXYDIFF_CUDNN_DETERMINISTIC", False)
+    if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
+        torch.backends.cuda.matmul.allow_tf32 = env_flag("PROXYDIFF_TORCH_MATMUL_TF32", True)
 
 
 def average_ranks(values):
@@ -970,7 +986,7 @@ def score_zcpt_near(archs, accs, seed: int, data_root: Path, limit: int | None, 
 
 def score_zcpt_zen(archs, accs, seed: int, limit: int | None, batch_size: int):
     ensure_torch_six()
-    ensure_legacy_torch_apis()
+    ensure_torch_compat_apis()
     sys.path.insert(0, str(REPRO_ROOT / "ZenNAS"))
     from ZeroShotProxy.compute_zen_score import compute_nas_score
 
@@ -1469,7 +1485,8 @@ class EznasHook:
     def __init__(self, module, backward=False):
         if backward:
             # Match official EZNAS.  The full backward hook path can fail on
-            # older torch in-place ReLU/view graphs and produced degenerate
+            # A non-inplace ReLU avoids view/in-place interactions that can
+            # produce degenerate activation statistics in this scorer.
             self.hook = module.register_backward_hook(self.hook_fn)
         else:
             self.hook = module.register_forward_hook(self.hook_fn)
@@ -1870,7 +1887,7 @@ def make_zcpt_model_scorer(
 
     if method == "zen":
         ensure_torch_six()
-        ensure_legacy_torch_apis()
+        ensure_torch_compat_apis()
         sys.path.insert(0, str(REPRO_ROOT / "ZenNAS"))
         import ZeroShotProxy.compute_zen_score as zen_score
 
@@ -2285,7 +2302,7 @@ def main():
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
-    torch.backends.cudnn.benchmark = True
+    configure_reproducible_backend(args.method)
 
     archs, accs = load_pool(args.arch_file)
     data_root = Path(args.data_root)

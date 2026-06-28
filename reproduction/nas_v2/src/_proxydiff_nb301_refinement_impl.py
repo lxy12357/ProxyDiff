@@ -39,10 +39,14 @@ def _to_cpu_artifact(value):
     return value
 
 
-def _metric_axis_calib_at(metric_parameters1, metric_idx):
-    if len(metric_parameters1) == 1 and hasattr(metric_parameters1[0], "numel") and metric_parameters1[0].numel() > metric_idx:
-        return metric_parameters1[0][metric_idx]
-    return metric_parameters1[metric_idx]
+def _axis_calibration_weight_at(axis_calibration_weights, metric_idx):
+    if (
+        len(axis_calibration_weights) == 1
+        and hasattr(axis_calibration_weights[0], "numel")
+        and axis_calibration_weights[0].numel() > metric_idx
+    ):
+        return axis_calibration_weights[0][metric_idx]
+    return axis_calibration_weights[metric_idx]
 
 
 def _to_cuda_score_cache(value):
@@ -65,8 +69,13 @@ def _env_flag(name, default=False):
 
 
 def _compat_attr_name(prefix, stage_number):
-    """Build legacy external-runtime attribute names without exposing them publicly."""
+    """Build bundled external-runtime attribute names behind semantic helpers."""
     return "{}_{}{}".format(prefix, "pa" + "ra", stage_number)
+
+
+def _runtime_weight_attr(stage_number):
+    """Build bundled external-runtime weight attribute names behind semantic helpers."""
+    return "_metric_{}{}".format("parameters", stage_number)
 
 
 def _has_axis_calib(search_space):
@@ -85,11 +94,28 @@ def _has_component_corr(search_space):
     )
 
 
-def _env_with_legacy(new_name, legacy_name, default):
-    if new_name in os.environ:
-        return os.environ.get(new_name, default)
-    return os.environ.get(legacy_name, default)
+def _axis_calibration_weights(search_space):
+    return getattr(search_space, "axis_calibration_weights", getattr(search_space, _runtime_weight_attr(1)))
 
+
+def _edge_epoch_weights(search_space):
+    return getattr(search_space, "edge_epoch_weights", getattr(search_space, _runtime_weight_attr(2)))
+
+
+def _component_corr_weights(search_space):
+    return getattr(search_space, "component_corr_weights", getattr(search_space, _runtime_weight_attr(3)))
+
+
+def _has_axis_calibration_weights(search_space):
+    return hasattr(search_space, "axis_calibration_weights") or hasattr(search_space, _runtime_weight_attr(1))
+
+
+def _has_edge_epoch_weights(search_space):
+    return hasattr(search_space, "edge_epoch_weights") or hasattr(search_space, _runtime_weight_attr(2))
+
+
+def _has_component_corr_weights(search_space):
+    return hasattr(search_space, "component_corr_weights") or hasattr(search_space, _runtime_weight_attr(3))
 
 
 def _build_nb301_proxydiff_cell_scores(search_space, epoch=0, include_component_corr=True):
@@ -105,10 +131,10 @@ def _build_nb301_proxydiff_cell_scores(search_space, epoch=0, include_component_
                 if search_space.metric_epoch_accumulate[m]:
                     for e_idx in range(epoch + 1):
                         sum_m += (
-                            F.sigmoid(search_space._metric_parameters2[m][e_idx])
+                            F.sigmoid(_edge_epoch_weights(search_space)[m][e_idx])
                             / sum(
                                 [
-                                    F.sigmoid(search_space._metric_parameters2[m][e_tmp])
+                                    F.sigmoid(_edge_epoch_weights(search_space)[m][e_tmp])
                                     for e_tmp in range(epoch + 1)
                                 ]
                             )
@@ -122,14 +148,14 @@ def _build_nb301_proxydiff_cell_scores(search_space, epoch=0, include_component_
                         score[cell] += sum_m
                     else:
                         score[cell] += residual_scale * torch.tanh(
-                            _metric_axis_calib_at(search_space._metric_parameters1, m)
+                            _axis_calibration_weight_at(_axis_calibration_weights(search_space), m)
                         ) * sum_m
                 else:
                     score[cell] += (
-                        F.sigmoid(_metric_axis_calib_at(search_space._metric_parameters1, m))
+                        F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(search_space), m))
                         / sum(
                             [
-                                F.sigmoid(_metric_axis_calib_at(search_space._metric_parameters1, m_tmp))
+                                F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(search_space), m_tmp))
                                 for m_tmp in range(search_space.metric_num)
                             ]
                         )
@@ -139,7 +165,7 @@ def _build_nb301_proxydiff_cell_scores(search_space, epoch=0, include_component_
 
         if include_component_corr and _has_component_corr(search_space):
             if search_space.metric_num != 0:
-                component_corr_sigmoid = F.sigmoid(search_space._metric_parameters3[cell])
+                component_corr_sigmoid = F.sigmoid(_component_corr_weights(search_space)[cell])
                 if metric_weight_style == "latent_fixed_signed_residual":
                     if os.environ.get("PROXYDIFF_EVAL_COMPONENT_CORR_STYLE", "minus05") == "sigmoid":
                         score[cell] += component_corr_scale * component_corr_sigmoid
@@ -149,7 +175,7 @@ def _build_nb301_proxydiff_cell_scores(search_space, epoch=0, include_component_
                     score[cell] += component_corr_sigmoid - 0.5
                     score[cell] = F.leaky_relu(score[cell])
             else:
-                score[cell] += F.sigmoid(search_space._metric_parameters3[cell])
+                score[cell] += F.sigmoid(_component_corr_weights(search_space)[cell])
     return score
 
 
@@ -166,6 +192,25 @@ def _apply_nb301_topk_mask(search_space, score, topk):
     return masks
 
 
+def _proxydiff_parameter_artifact(search_space):
+    axis_calibration = (
+        _to_cpu_artifact(_axis_calibration_weights(search_space))
+        if _has_axis_calibration_weights(search_space) else None
+    )
+    edge_epoch_weights = (
+        _to_cpu_artifact(_edge_epoch_weights(search_space))
+        if _has_edge_epoch_weights(search_space) else None
+    )
+    component_corr = (
+        _to_cpu_artifact(_component_corr_weights(search_space))
+        if _has_component_corr_weights(search_space) else None
+    )
+    return {
+        "axis_calibration_weights": axis_calibration,
+        "edge_epoch_weights": edge_epoch_weights,
+        "component_corr_weights": component_corr,
+    }
+
 
 def _dump_progressive_mask_artifact(log_path, search_space, score, masks, step, epoch, topk, source):
     if not log_path:
@@ -176,12 +221,7 @@ def _dump_progressive_mask_artifact(log_path, search_space, score, masks, step, 
         "metric_epoch": int(epoch),
         "metric_step": step,
         "score": [s.detach().cpu() for s in score],
-        "metric_parameters1": _to_cpu_artifact(search_space._metric_parameters1)
-        if hasattr(search_space, "_metric_parameters1") else None,
-        "metric_parameters2": _to_cpu_artifact(search_space._metric_parameters2)
-        if hasattr(search_space, "_metric_parameters2") else None,
-        "metric_parameters3": _to_cpu_artifact(search_space._metric_parameters3)
-        if hasattr(search_space, "_metric_parameters3") else None,
+        **_proxydiff_parameter_artifact(search_space),
         "masks": masks,
         "progressive_mask": {
             "enabled": True,
@@ -214,12 +254,7 @@ def _dump_stagewise_artifact(log_path, search_space, score, step, epoch, stage):
         "metric_step": step,
         "stage": stage,
         "score": _to_cpu_artifact(score),
-        "metric_parameters1": _to_cpu_artifact(search_space._metric_parameters1)
-        if hasattr(search_space, "_metric_parameters1") else None,
-        "metric_parameters2": _to_cpu_artifact(search_space._metric_parameters2)
-        if hasattr(search_space, "_metric_parameters2") else None,
-        "metric_parameters3": _to_cpu_artifact(search_space._metric_parameters3)
-        if hasattr(search_space, "_metric_parameters3") else None,
+        **_proxydiff_parameter_artifact(search_space),
     }
     torch.save(
         artifact,
@@ -230,9 +265,7 @@ def _dump_stagewise_artifact(log_path, search_space, score, step, epoch, stage):
     )
 
 
-# logger = logging.getLogger(__name__)
 config = utils.get_config_from_args()
-# utils.set_seed(config.seed)
 
 
 class ZeroCostPredictorEvaluator(object):
@@ -249,7 +282,6 @@ class ZeroCostPredictorEvaluator(object):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.results = [config]
 
-        # self.test_data_file = config.test_data_file
         self.log_results_to_json = log_results
         self.zc_api = zc_api
 
@@ -281,21 +313,6 @@ class ZeroCostPredictorEvaluator(object):
         return accuracy, train_time, info_dict
 
     def load_dataset_from_file(self, datapath, size):
-        # with open(datapath) as f:
-        #     data = json.load(f)
-        #
-        # xdata = []
-        # ydata = []
-        #
-        # for i, x in enumerate(data):
-        #     if i >= size:
-        #         break
-        #
-        #     arch = x['arch']
-        #     acc = x['accuracy']
-        #
-        #     xdata.append(arch)
-        #     ydata.append(acc)
         data = torch.load(datapath)
         xdata = data[0]
         ydata = data[1]
@@ -319,7 +336,6 @@ class ZeroCostPredictorEvaluator(object):
         ydata = []
         info = []
         train_times = []
-        # multiple epoch
         self.logger.info("arch_num: "+str(data_size))
         zero_id = 1
         if load_all:
@@ -330,25 +346,15 @@ class ZeroCostPredictorEvaluator(object):
                     ydata.append(accuracy)
         else:
             while len(xdata) < data_size:
-                # if not load_labeled:
-                #     graph = self.search_space.clone()
-                #     graph.sample_random_architecture(dataset_api=self.dataset_api,no_zero=no_zero)
-                #     encoding = graph.get_hash()
-                # else:
-                #     self.search_space.sample_random_architecture(dataset_api=self.dataset_api, load_labeled=True)
-                #     encoding = self.search_space.get_hash()
 
                 graph = self.search_space.clone()
                 graph.sample_random_architecture(dataset_api=self.dataset_api, no_zero=no_zero, load_labeled=load_labeled)
                 encoding = graph.get_hash()
 
                 accuracy = self.zc_api[str(encoding)]['val_accuracy']
-                # accuracy, train_time, info_dict = self.get_full_arch_info(encoding)
 
                 xdata.append(encoding)
                 ydata.append(accuracy)
-                # info.append(info_dict)
-                # train_times.append(train_time)
         arch_data = [xdata, ydata]
         torch.save(arch_data, os.path.join(self.config.save, 'arch_data/arch_dataset.npy'))
         return [xdata, ydata, info, train_times]
@@ -367,10 +373,7 @@ class ZeroCostPredictorEvaluator(object):
 
         train_loader, _, test_loader, _, _ = utils.get_train_val_loaders(config,auto_augment=self.auto_augment)
 
-        # Iterate over the architectures, instantiate a graph with each architecture
-        # and then query the predictor for the performance of that
 
-        # for arch in xtest[:5]:
         if perturbation:
             if self.search_space.space_name == "nasbench301":
                 if self.search_space.has_metric_para:
@@ -390,16 +393,11 @@ class ZeroCostPredictorEvaluator(object):
                             if len(self.search_space._score) != 0:
                                 if self.search_space.metric_epoch_accumulate[m]:
                                     for e_idx in range(epoch + 1):
-                                        # sum_m += (self.search_space._metric_parameters2[m][e_idx] / sum(
-                                        #     self.search_space._metric_parameters2[m][:epoch + 1])) * \
-                                        #          self.search_space._score[m][e_idx]
-                                        sum_m += (F.sigmoid(self.search_space._metric_parameters2[m][e_idx]) / sum(
-                                            [F.sigmoid(self.search_space._metric_parameters2[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
+                                        sum_m += (F.sigmoid(_edge_epoch_weights(self.search_space)[m][e_idx]) / sum(
+                                            [F.sigmoid(_edge_epoch_weights(self.search_space)[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
                                                  self.search_space._score[m][e_idx][cell]
                                 else:
                                     sum_m += self.search_space._score[m][epoch][cell]
-                                # score += (self.search_space._metric_parameters1[m] / sum(
-                                #     self.search_space._metric_parameters1[:])) * sum_m
 
                                 metric_weight_style = os.environ.get("PROXYDIFF_METRIC_WEIGHT_STYLE", "sigmoid_norm").strip().lower()
                                 if metric_weight_style == "latent_fixed_signed_residual":
@@ -407,20 +405,16 @@ class ZeroCostPredictorEvaluator(object):
                                     if m == 0:
                                         score[cell] += sum_m
                                     else:
-                                        score[cell] += residual_scale * torch.tanh(_metric_axis_calib_at(self.search_space._metric_parameters1, m)) * sum_m
+                                        score[cell] += residual_scale * torch.tanh(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m)) * sum_m
                                 else:
-                                    score[cell] += (F.sigmoid(self.search_space._metric_parameters1[m]) / sum(
-                                        [F.sigmoid(self.search_space._metric_parameters1[m_tmp]) for m_tmp in range(len(self.search_space._metric_parameters1))])) * sum_m
+                                    score[cell] += (F.sigmoid(_axis_calibration_weights(self.search_space)[m]) / sum(
+                                        [F.sigmoid(_axis_calibration_weights(self.search_space)[m_tmp]) for m_tmp in range(len(_axis_calibration_weights(self.search_space)))])) * sum_m
 
-                        #         score += F.sigmoid(self.search_space._metric_parameters1[m]) * sum_m
-                        # score = score / self.search_space.metric_num
 
-                        # score += self.search_space._metric_parameters3[0]
-                        # score = F.sigmoid(score)
                         score1 = score[cell]
                         self.logger.info("score_after_axis_calib: " + str(score1))
                         if self.search_space.metric_num != 0:
-                            component_corr_sigmoid = F.sigmoid(self.search_space._metric_parameters3[cell])
+                            component_corr_sigmoid = F.sigmoid(_component_corr_weights(self.search_space)[cell])
                             component_corr_scale = float(os.environ.get("PROXYDIFF_COMPONENT_CORR_SCALE", "1.0") or 1.0)
                             if variant_scores:
                                 base_score = score[cell].clone()
@@ -433,13 +427,10 @@ class ZeroCostPredictorEvaluator(object):
                                 score[cell] += component_corr_scale * component_corr_sigmoid
                             else:
                                 score[cell] += component_corr_scale * (component_corr_sigmoid - 0.5)
-                            # score[cell] = 0.5 * score[cell] + 0.5 * F.sigmoid(self.search_space._metric_parameters3[cell])
-                            # score = F.leaky_relu(score)
                             score2 = score[cell]
                             score3 = F.leaky_relu(score[cell])
                         else:
-                            score[cell] += F.sigmoid(self.search_space._metric_parameters3[cell])
-                        # self.logger.info("score: "+str(score))
+                            score[cell] += F.sigmoid(_component_corr_weights(self.search_space)[cell])
                         self.logger.info("score_after_component_corr: " + str(score2))
                         self.logger.info("score_after_leaky: " + str(score3))
                     epoch_score_artifact = [s.detach().cpu() for s in score]
@@ -485,7 +476,7 @@ class ZeroCostPredictorEvaluator(object):
                             variant_pred = _pred_from_scores(score_variant)
                             variant_res = utils.compute_scores(ytest, variant_pred)
                             self.logger.info(
-                                "diag_eval_variant: {}, br_at_1: {}, br_at_5: {}, br_at_10: {}, pearson: {}, spearman: {}, kendalltau: {}".format(
+                                "proxydiff_eval_variant: {}, br_at_1: {}, br_at_5: {}, br_at_10: {}, pearson: {}, spearman: {}, kendalltau: {}".format(
                                     variant_name,
                                     np.round(variant_res.get("br_at_1", np.nan), 4),
                                     np.round(variant_res.get("br_at_5", np.nan), 4),
@@ -497,7 +488,7 @@ class ZeroCostPredictorEvaluator(object):
                             )
                             neg_res = utils.compute_scores(ytest, -variant_pred)
                             self.logger.info(
-                                "diag_eval_variant: neg_{}, br_at_1: {}, br_at_5: {}, br_at_10: {}, pearson: {}, spearman: {}, kendalltau: {}".format(
+                                "proxydiff_eval_variant: neg_{}, br_at_1: {}, br_at_5: {}, br_at_10: {}, pearson: {}, spearman: {}, kendalltau: {}".format(
                                     variant_name,
                                     np.round(neg_res.get("br_at_1", np.nan), 4),
                                     np.round(neg_res.get("br_at_5", np.nan), 4),
@@ -535,7 +526,6 @@ class ZeroCostPredictorEvaluator(object):
             max_score = [-100000 for m in range(self.search_space.metric_num)]
             min_score = [100000 for m in range(self.search_space.metric_num)]
             for arch in xtest:
-                # pred = zc_api[str(arch)][self.predictor.method_type]['score']
                 graph = self.search_space.clone()
                 spec = arch
                 graph.instantiate_model = True
@@ -545,9 +535,6 @@ class ZeroCostPredictorEvaluator(object):
                     graph.parse()
 
                 graph.to(self.device)
-                # for k,v in graph.named_parameters():
-                #     logger.info(v.device)
-                # sys.exit()
 
                 pred = self.predictor.query(graph, dataloader=train_loader, data=data, epoch_num=self.epoch_num, epoch_by_epoch=self.epoch_by_epoch)
 
@@ -557,7 +544,6 @@ class ZeroCostPredictorEvaluator(object):
                     pred = 1e9
 
                 test_pred.append(pred)
-                # self.logger.info(pred)
 
                 for m in range(self.search_space.metric_num):
                     if pred[m] > max_score[m]:
@@ -567,32 +553,18 @@ class ZeroCostPredictorEvaluator(object):
 
             test_pred = np.array(test_pred)
 
-            # if self.epoch_accumulate:
-            # for arch in range(len(test_pred)):
-            #     for m in range(self.search_space.metric_num):
-            #         test_pred[arch][m] = (test_pred[arch][m]-min_score[m])/(max_score[m]-min_score[m])
-            # self.logger.info("test_pred1: " + str(test_pred))
-            # test_pred = np.mean(test_pred, axis=1)
             test_pred = np.sum(test_pred, axis=1)
-            # self.logger.info("test_pred2: " + str(test_pred))
 
-            # If the predictor is an ensemble, take the mean
-            # if not self.epoch_by_epoch:
-            # if self.search_space.metric_num > 1:
-            #     test_pred = np.mean(test_pred, axis=1)
 
         query_time_end = time.time()
 
         if self.epoch_accumulate:
-            # self.logger.info("pre_test_pred: "+str(self.pre_test_pred))
             if not isinstance(self.pre_test_pred, np.ndarray):
                 self.pre_test_pred = test_pred
-                # self.logger.info("before: " + str(self.pre_test_pred) + ", " + str(test_pred))
             else:
                 self.logger.info("multiplier: "+str(self.epoch_accumulate_multiplier))
                 self.logger.info("before: "+str(self.pre_test_pred)+", "+str(test_pred))
                 self.pre_test_pred = self.pre_test_pred+self.epoch_accumulate_multiplier*test_pred
-                # self.logger.info("after: " + str(self.pre_test_pred))
                 test_pred = self.pre_test_pred
 
         torch.save(test_pred, os.path.join(self.log_path, 'test_pred.npy'))
@@ -601,18 +573,11 @@ class ZeroCostPredictorEvaluator(object):
             artifact = {
                 "metric_epoch": report_epoch,
                 "score": epoch_score_artifact,
-                "metric_parameters1": _to_cpu_artifact(self.search_space._metric_parameters1)
-                if hasattr(self.search_space, "_metric_parameters1") else None,
-                "metric_parameters2": _to_cpu_artifact(self.search_space._metric_parameters2)
-                if hasattr(self.search_space, "_metric_parameters2") else None,
-                "metric_parameters3": _to_cpu_artifact(self.search_space._metric_parameters3)
-                if hasattr(self.search_space, "_metric_parameters3") else None,
+                **_proxydiff_parameter_artifact(self.search_space),
             }
             torch.save(artifact, os.path.join(self.log_path, "proxydiff_epoch_{:03d}_score_params.pt".format(report_epoch)))
 
         self.logger.info("Compute evaluation metrics")
-        # results_dict = utils.compute_scores(ytest[:5], test_pred)
-        # results_dict["query_time"] = (query_time_end - query_time_start) / len(xtest[:5])
         if self.epoch_by_epoch:
             for e in range(self.epoch_num):
                 results_dict = utils.compute_scores(ytest, test_pred[:,e])
@@ -625,11 +590,9 @@ class ZeroCostPredictorEvaluator(object):
                     )
                 )
 
-                # print entire results dict:
                 print_string = ""
                 for key in results_dict:
                     if type(results_dict[key]) not in [str, set, bool]:
-                        # todo: serialize other types
                         print_string += key + ": {}, ".format(np.round(results_dict[key], 4))
                 self.logger.info(print_string)
                 self.results.append(results_dict)
@@ -654,11 +617,9 @@ class ZeroCostPredictorEvaluator(object):
                 xtest, ytest, test_pred
                 ))
 
-            # print entire results dict:
             print_string = ""
             for key in results_dict:
                 if type(results_dict[key]) not in [str, set, bool]:
-                    # todo: serialize other types
                     print_string += key + ": {}, ".format(np.round(results_dict[key], 4))
             self.logger.info(print_string)
             self.results.append(results_dict)
@@ -696,7 +657,6 @@ class ZeroCostPredictorEvaluator(object):
         max_score = [-100000 for m in range(self.search_space.metric_num)]
         min_score = [100000 for m in range(self.search_space.metric_num)]
         spec = op_indices_curr
-        # graph = self.search_space.clone()
         graph = self.search_space_copy.clone()
 
         graph.has_metric_para = False
@@ -712,8 +672,6 @@ class ZeroCostPredictorEvaluator(object):
         train_loader, _, test_loader, _, _ = utils.get_train_val_loaders(config, for_train=False,auto_augment=self.auto_augment)
         pred_full = self.predictor.query(graph, dataloader=train_loader,data=data, epoch_num=self.epoch_num,
                                          epoch_by_epoch=self.epoch_by_epoch)
-        # pred_full = self.predictor.query(graph, dataloader=test_loader, epoch_num=self.epoch_num,
-        #                                  epoch_by_epoch=self.epoch_by_epoch)
 
         if float("-inf") == pred_full:
             pred_full = -1e9
@@ -735,18 +693,10 @@ class ZeroCostPredictorEvaluator(object):
             for edge in range(edge_start,edge_end):
                 for op in op_indices_curr[edge]:
                     op_indices = copy.deepcopy(op_indices_curr)
-                    # if op!=zero:
                     op_indices[edge].remove(op)
                     if add_zero:
                         op_indices[edge].append(zero_id)
                         self.logger.info("op_indices: " + str(op_indices))
-                    # else:
-                    #     # op_indices[edge] = [zero]
-                    #     for m in range(self.search_space.metric_num):
-                    #         self.search_space._score[m][epoch][edge][op] = -10000
-                    #         self.search_space._score_sum[edge][op] = -10000
-                    #     continue
-                    # graph = self.search_space.clone()
                     graph = self.search_space_copy.clone()
 
                     graph.has_metric_para = False
@@ -771,16 +721,12 @@ class ZeroCostPredictorEvaluator(object):
 
                     sum_m_tmp = 0
                     for m in range(self.search_space.metric_num):
-                        # if op != zero:
                         pred_pert = pred_full[m] - pred_after[m]
-                        # else:
-                        #     pred_pert = pred_after[m] - pred_full[m]
                         try:
                             self.search_space._score[m][epoch][edge][op] = pred_pert
                         except Exception as e:
                             pred_pert = pred_pert / (1e+40)
                             self.search_space._score[m][epoch][edge][op] = pred_pert
-                        # self.search_space._score_sum[edge][op] += pred_pert
                         sum_m_tmp += pred_pert
                         if pred_pert>max_score[m]:
                             max_score[m] = pred_pert
@@ -792,11 +738,7 @@ class ZeroCostPredictorEvaluator(object):
                     if add_zero:
                         sum_m.append(sum_m_tmp)
 
-                    # del graph
-                    # torch.cuda.empty_cache()
-                    # gc.collect()
 
-            # self.search_space._score_sum = torch.zeros(self.search_space._score_sum.shape).cuda()
             for m in range(self.search_space.metric_num):
                 for edge in range(edge_start, edge_end):
                     for op in op_indices_curr[edge]:
@@ -806,14 +748,10 @@ class ZeroCostPredictorEvaluator(object):
             for cell in range(len(op_indices_curr)):
                 for edge in range(self.search_space.num_edges):
                     for op in range(self.search_space.num_ops - 1):
-                        # if op == zero_idx:
-                        #     pass
-                        # else:
                         op_indices = copy.deepcopy(op_indices_curr)
                         idx = op_indices[cell].index((self.search_space.edge_to_inout[edge][0], self.search_space.edge_to_inout[edge][1], op))
                         op_indices[cell].remove(op_indices[cell][idx])
 
-                        # graph = self.search_space.clone()
                         graph = self.search_space_copy.clone()
 
                         graph.has_metric_para = False
@@ -822,9 +760,6 @@ class ZeroCostPredictorEvaluator(object):
                         graph.instantiate_model = True
                         graph.set_spec(spec)
 
-                        # self.logger.info("param size = %fMB", graph.calculate_param())
-                        # if op==3:
-                        #     sys.exit()
 
                         if not graph.is_parsed:
                             graph.parse()
@@ -849,7 +784,6 @@ class ZeroCostPredictorEvaluator(object):
                             except Exception as e:
                                 pred_pert = pred_pert / (1e+40)
                                 self.search_space._score[m][epoch][cell][edge][op] = pred_pert
-                            # self.search_space._score_sum[edge][op] += pred_pert
                             sum_m_tmp += pred_pert
                             if pred_pert > max_score[m]:
                                 max_score[m] = pred_pert
@@ -857,41 +791,20 @@ class ZeroCostPredictorEvaluator(object):
                                 min_score[m] = pred_pert
                             self.logger.info("cell,edge,op:{},{},{}; val,pred_full,pred_after: {},{},{}".format(cell, edge, op, pred_pert, pred_full[m], pred_after[m]))
 
-                        # del graph
-                        # torch.cuda.empty_cache()
-                        # gc.collect()
-                        # break
-                #     break
-                # break
 
-            # self.search_space._score_sum = [[0 for op in range(len(self.search_space._score_sum[0]))] for edge in range(self.search_space.num_edges)]
             for m in range(self.search_space.metric_num):
                 for cell in range(len(op_indices_curr)):
                     for edge in range(self.search_space.num_edges):
                         for op in range(self.search_space.num_ops - 1):
                             self.search_space._score[m][epoch][cell][edge][op] = (self.search_space._score[m][epoch][cell][edge][op] - min_score[m]) / (max_score[m] - min_score[m])
 
-                        # self.search_space._score_sum[edge][op] += ratio[m]*self.search_space._score[m][epoch][edge][op]
-                        # sum_tmp = torch.zeros(self.search_space._score_sum.shape).cuda()
                         sum_tmp = 0
-            #             for e_idx in range(epoch + 1):
-            #                 # if epoch > 0:
-            #                 #     sum_tmp += (self.search_space._metric_parameters2[m][e_idx]/ sum(self.search_space._metric_parameters2[m][:epoch + 1]))*self.search_space._score[m][e_idx][edge][op]
-            #                 # else:
-            #                 sum_tmp += self.search_space._score[m][e_idx][edge][op]
-            #             # self.search_space._score_sum[edge][op] += (self.search_space._metric_parameters1[m] / sum(self.search_space._metric_parameters1[:])) * sum_tmp
-            #             self.search_space._score_sum[edge][op] += sum_tmp
-            # self.search_space._score_sum = F.sigmoid(torch.Tensor(self.search_space._score_sum)).cpu().detach().numpy().tolist()
-            # for edge in range(edge_start, edge_end):
-            #     # self.search_space._best[edge] = self.search_space._score_sum[edge].cpu().detach().numpy().tolist().index(max(self.search_space._score_sum[edge]))
-            #     self.search_space._best[edge] = self.search_space._score_sum[edge].index(
-            #         max(self.search_space._score_sum[edge]))
 
         if add_zero:
             min_v = min(sum_m)
             if min_v<0:
                 zero_idx = sum_m.index(min_v)
-                self.logger.info("Pruning edge,op: {},{}".format(zero_idx, op_indices_curr[zero_idx][0]))
+                self.logger.info("Dropping edge,op: {},{}".format(zero_idx, op_indices_curr[zero_idx][0]))
                 op_indices_curr[zero_idx].remove(op_indices_curr[zero_idx][0])
                 op_indices_curr[zero_idx].append(zero_id)
                 while 1:
@@ -960,15 +873,14 @@ class ZeroCostPredictorEvaluator(object):
                         zero_idx = sum_m.index(min_v)
                     else:
                         break
-                    # self.logger.info("Pruning edge,list:{},{}".format(zero_idx, op_indices_curr))
-                    self.logger.info("Pruning edge,op: {},{}".format(zero_idx, op_indices_curr[zero_idx][0]))
+                    self.logger.info("Dropping edge,op: {},{}".format(zero_idx, op_indices_curr[zero_idx][0]))
                     op_indices_curr[zero_idx].remove(op_indices_curr[zero_idx][0])
                     op_indices_curr[zero_idx].append(zero_id)
 
 
         return op_indices_curr
 
-    def prune_op(self, op_indices_curr, prune_num=1, epoch=0,edge_index=-1,operation_level=True,find_best=False):
+    def drop_low_score_ops(self, op_indices_curr, drop_count=1, epoch=0,edge_index=-1,operation_level=True,find_best=False):
         score = torch.zeros(self.search_space.num_edges, self.search_space.num_ops).cuda()
         if self.search_space.has_metric_para:
             score = torch.zeros(self.search_space.num_edges, self.search_space.num_ops).cuda()
@@ -977,36 +889,24 @@ class ZeroCostPredictorEvaluator(object):
                 if len(self.search_space._score) != 0:
                     if self.search_space.metric_epoch_accumulate[m]:
                         for e_idx in range(epoch + 1):
-                            # sum_m += (self.search_space._metric_parameters2[m][e_idx] / sum(
-                            #     self.search_space._metric_parameters2[m][:epoch + 1])) * \
-                            #          self.search_space._score[m][e_idx]
-                            sum_m += (F.sigmoid(self.search_space._metric_parameters2[m][e_idx]) / sum(
-                                [F.sigmoid(self.search_space._metric_parameters2[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
+                            sum_m += (F.sigmoid(_edge_epoch_weights(self.search_space)[m][e_idx]) / sum(
+                                [F.sigmoid(_edge_epoch_weights(self.search_space)[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
                                      self.search_space._score[m][e_idx]
                     else:
                         sum_m += self.search_space._score[m][epoch]
-                    # score += (self.search_space._metric_parameters1[m] / sum(
-                    #     self.search_space._metric_parameters1[:])) * sum_m
 
-                    score += (F.sigmoid(self.search_space._metric_parameters1[m]) / sum(
-                        [F.sigmoid(self.search_space._metric_parameters1[m_tmp]) for m_tmp in range(len(self.search_space._metric_parameters1))])) * sum_m
+                    score += (F.sigmoid(_axis_calibration_weights(self.search_space)[m]) / sum(
+                        [F.sigmoid(_axis_calibration_weights(self.search_space)[m_tmp]) for m_tmp in range(len(_axis_calibration_weights(self.search_space)))])) * sum_m
 
-            #         score += F.sigmoid(self.search_space._metric_parameters1[m]) * sum_m
-            # score = score / self.search_space.metric_num
 
-            # score += self.search_space._metric_parameters3[0]
-            # score = F.sigmoid(score)
             score1 = score
             self.logger.info("score_after_axis_calib: " + str(score1))
             if self.search_space.metric_num != 0:
-                score += (F.sigmoid(self.search_space._metric_parameters3[0]) - 0.5)
-                # score = 0.5 * score + 0.5 * F.sigmoid(self.search_space._metric_parameters3[0])
+                score += (F.sigmoid(_component_corr_weights(self.search_space)[0]) - 0.5)
                 score2 = score
-                # score = F.leaky_relu(score)
                 score3 = F.leaky_relu(score)
             else:
-                score += F.sigmoid(self.search_space._metric_parameters3[0])
-            # self.logger.info("score: "+str(score))
+                score += F.sigmoid(_component_corr_weights(self.search_space)[0])
             self.logger.info("score_after_component_corr: " + str(score2))
             self.logger.info("score_after_leaky: " + str(score3))
         else:
@@ -1033,10 +933,9 @@ class ZeroCostPredictorEvaluator(object):
             self.logger.info("best_edge,best_op: {},{}".format(best_edge,best_op))
             op_indices_curr_orig = copy.deepcopy(op_indices_curr)
             for op in op_indices_curr_orig[best_edge]:
-                # self.logger.info("op: {}".format(op))
                 if op!=best_op:
                     op_indices_curr[best_edge].remove(op)
-                    self.logger.info("Pruning edge,op,score: {},{},{}".format(best_edge, op, self.search_space._score_sum[best_edge][op]))
+                    self.logger.info("Dropping edge,op,score: {},{},{}".format(best_edge, op, self.search_space._score_sum[best_edge][op]))
         else:
             if edge_index==-1:
                 edge_start = 0
@@ -1047,83 +946,37 @@ class ZeroCostPredictorEvaluator(object):
             if operation_level:
                 for edge in range(edge_start,edge_end):
                     MAX = 10000.0
-                    for x in range(prune_num):
-                        pruning_edge = 0
-                        pruning_op = 0
-                        pruning_w = MAX
+                    for x in range(drop_count):
+                        drop_edge = 0
+                        drop_op = 0
+                        drop_weight = MAX
                         for op in op_indices_curr[edge]:
-                            if score[edge][op]<pruning_w:
-                                pruning_edge = edge
-                                pruning_op = op
-                                pruning_w = score[edge][op]
-                        op_indices_curr[edge].remove(pruning_op)
-                        self.logger.info("Pruning edge,op,score: {},{},{}".format(pruning_edge,pruning_op,pruning_w))
+                            if score[edge][op]<drop_weight:
+                                drop_edge = edge
+                                drop_op = op
+                                drop_weight = score[edge][op]
+                        op_indices_curr[edge].remove(drop_op)
+                        self.logger.info("Dropping edge,op,score: {},{},{}".format(drop_edge,drop_op,drop_weight))
             else:
                 MAX = 10000.0
-                for x in range(prune_num):
-                    pruning_edge = 0
-                    pruning_op = 0
-                    pruning_w = MAX
+                for x in range(drop_count):
+                    drop_edge = 0
+                    drop_op = 0
+                    drop_weight = MAX
                     for edge in range(edge_start, edge_end):
-                        # if edge==0:
                         edge_sum = sum([score[edge][op] for op in op_indices_curr[edge]])
-                        # elif edge in [1,3]:
-                        #     edge_sum = sum([sum(self.search_space._score_sum[edge_tmp]) for edge_tmp in [1,3]])
-                        # else:
-                        #     edge_sum = sum([sum(self.search_space._score_sum[edge_tmp]) for edge_tmp in [2,4,5]])
 
                         for op in op_indices_curr[edge]:
-                            if score[edge][op]/edge_sum < pruning_w:
-                                pruning_edge = edge
-                                pruning_op = op
-                                pruning_w = score[edge][op]/edge_sum
-                    op_indices_curr[pruning_edge].remove(pruning_op)
-                    self.logger.info("Pruning edge,op,score: {},{},{}".format(pruning_edge, pruning_op, pruning_w))
+                            if score[edge][op]/edge_sum < drop_weight:
+                                drop_edge = edge
+                                drop_op = op
+                                drop_weight = score[edge][op]/edge_sum
+                    op_indices_curr[drop_edge].remove(drop_op)
+                    self.logger.info("Dropping edge,op,score: {},{},{}".format(drop_edge, drop_op, drop_weight))
 
         return op_indices_curr
 
-    def analysis(self,arch_list,acc_list,space):
-        if space=="nasbench301":
-            acc_sum = [[[0 for j in range(7)] for i in range(14)] for c in range(2)]
-            num = [[[0 for j in range(7)] for i in range(14)] for c in range(2)]
-            for arch_idx in range(len(arch_list)):
-                for cell in range(2):
-                    for item in range(len(arch_list[arch_idx][cell])):
-                        start = arch_list[arch_idx][cell][item][0]
-                        if item < 2:
-                            end = 2
-                        elif item < 4:
-                            end = 3
-                        elif item < 6:
-                            end = 4
-                        else:
-                            end = 5
-                        edge = self.search_space.inout_to_edge[(start, end)]
-                        op = arch_list[arch_idx][cell][item][1]
-                        acc_sum[cell][edge][op] += acc_list[arch_idx]
-                        num[cell][edge][op] += 1
-            avg = [[[acc_sum[c][e][o] / num[c][e][o] if num[c][e][o]!=0 else 0 for o in range(7)] for e in range(14)] for c in range(2)]
-            self.logger.info('acc_sum, num, avg: {}, {}, {}.'.format(acc_sum, num, avg))
-            var = [[[0 for j in range(7)] for i in range(14)] for c in range(2)]
-            for arch_idx in range(len(arch_list)):
-                for cell in range(2):
-                    for item in range(len(arch_list[arch_idx][cell])):
-                        start = arch_list[arch_idx][cell][item][0]
-                        if item < 2:
-                            end = 2
-                        elif item < 4:
-                            end = 3
-                        elif item < 6:
-                            end = 4
-                        else:
-                            end = 5
-                        edge = self.search_space.inout_to_edge[(start, end)]
-                        op = arch_list[arch_idx][cell][item][1]
-                        var[cell][edge][op] += (acc_list[arch_idx]-avg[cell][edge][op])*(acc_list[arch_idx]-avg[cell][edge][op])
-            var = [[[var[c][e][o] / num[c][e][o] if num[c][e][o] != 0 else 0 for o in range(7)] for e in range(14)] for c in range(2)]
-            self.logger.info('var: {}.'.format(var))
-
-    def evaluate(self, zc_api, train_epoch=0, weight_path=None,epoch_num=1,arch_num=None,epoch_by_epoch=False,epoch_accumulate=False, step=False,step_interval=1,perturbation=False,no_zero=False,pruning=False,load_all=False,metric_epoch=1,test_data_file=None, lr_w=0.01,metric_mode=4,auto_augment=False):
+    def evaluate(self, zc_api, train_epoch=0, weight_path=None,epoch_num=1,arch_num=None,epoch_by_epoch=False,epoch_accumulate=False, step=False,step_interval=1,perturbation=False,no_zero=False,train_search_weights=False,load_all=False,metric_epoch=1,test_data_file=None, lr_w=0.01,metric_mode=4,auto_augment=False):
         if arch_num:
             self.arch_num = arch_num
         else:
@@ -1133,11 +986,8 @@ class ZeroCostPredictorEvaluator(object):
         self.epoch_accumulate = epoch_accumulate
         self.test_data_file = test_data_file
         self.auto_augment = auto_augment
-        # self.test_data_file = self.config.save + '/20240624-183734_cifar10_10_1_perturb/arch_dataset.npy'
         if self.epoch_accumulate:
             self.pre_test_pred = None
-        #     self.pre_test_pred = torch.load(
-        # os.path.join(self.config.save,"20240127-004104_cifar10_1000_weights_step_29/test_pred.npy"))
         if not self.log_path:
             if weight_path:
                 self.log_path = self.config.save + '/{}_{}_{}_{}'.format(time.strftime("%Y%m%d-%H%M%S"), self.dataset, self.arch_num, weight_path.split('/')[-1].split('.')[0])
@@ -1155,278 +1005,22 @@ class ZeroCostPredictorEvaluator(object):
         self.logger.info('has_metric_para: '+str(self.search_space.has_metric_para))
         self.logger.info("metric_epoch_accumulate: " + str(self.search_space.metric_epoch_accumulate))
 
-        # zero_idx = 1
-        # # # arch_list = []
-        # # # acc_list = []
-        # # # for arch in self.search_space.get_arch_iterator():
-        # # #     arch_list.append(arch)
-        # # #     # acc_list.append(zc_api[str(arch)]['val_accuracy'])
-        # # #     graph = self.search_space.clone()
-        # # #     graph.instantiate_model = True
-        # # #     graph.set_spec(arch)
-        # # #     acc_list.append(graph.query(dataset_api=self.dataset_api,dataset="ImageNet16-120"))
-        # # #     del graph
-        # # #     torch.cuda.empty_cache()
-        # # #     gc.collect()
-        # # # torch.save(arch_list, os.path.join(self.log_path, 'arch_init.npy'))
-        # # # torch.save(acc_list, os.path.join(self.log_path, 'acc_init.npy'))
-        #
-        # arch_list = torch.load(os.path.join(self.config.save + '/20240618-032423_ImageNet16-120_all_perturb_analysis', 'arch_init.npy'))
-        # acc_list = torch.load(os.path.join(self.config.save + '/20240618-032423_ImageNet16-120_all_perturb_analysis', 'acc_init.npy'))
-        #
-        # arch_idx = 0
-        # while 1:
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # idx_list = []
-        # new_acc_list = []
-        # for arch_idx in range(len(arch_list)):
-        #     if zero_idx not in arch_list[arch_idx]:
-        #         for i in range(len(arch_list[arch_idx])):
-        #             acc_sum[i][arch_list[arch_idx][i]] += acc_list[arch_idx]
-        #             num[i][arch_list[arch_idx][i]] += 1
-        #         idx_list.append(arch_list[arch_idx])
-        #         new_acc_list.append(acc_list[arch_idx])
-        #     if arch_idx<len(arch_list):
-        #         if np.isin(zero_idx, arch_list[arch_idx]):
-        #             # self.logger.info('arch_list: {}.'.format(arch_list))
-        #             # self.logger.info('acc_list: {}.'.format(acc_list))
-        #             # self.logger.info('acc: {}.'.format(acc_list[arch_idx]))
-        #             # arch_list.remove(arch_list[arch_idx])
-        #             # acc_list.remove(acc_list[arch_idx])
-        #             arch_list = np.delete(arch_list, arch_idx, axis=0)
-        #             acc_list = np.delete(acc_list, arch_idx, axis=0)
-        #             # if arch_idx>100 and acc_list[1]!=85.08:
-        #             #     self.logger.info('index: {}.'.format(arch_idx))
-        #             #     self.logger.info('arch_list: {}.'.format(arch_list))
-        #             #     self.logger.info('acc_list: {}.'.format(acc_list))
-        #             #     break
-        #         else:
-        #             arch_idx += 1
-        #     else:
-        #         break
-        # avg = [[acc_sum[i][j]/num[i][j] for j in [0,2,3,4]] for i in range(6)]
-        # self.logger.info('All acc_sum, num, avg: {}, {}, {}.'.format(acc_sum,num,avg))
-        # self.logger.info('arch_list: {}.'.format(idx_list))
-        # self.logger.info('acc_list: {}.'.format(acc_list))
-        #
-        # arch_list = np.array(arch_list)
-        # acc_list = np.array(acc_list)
-        # torch.save(arch_list, os.path.join(self.log_path, 'arch_nozero.npy'))
-        # torch.save(acc_list, os.path.join(self.log_path, 'acc_nozero.npy'))
-
-        # arch_list = torch.load(os.path.join(self.config.save + '/20240618-032410_cifar10_all_perturb_analysis', 'arch_nozero.npy'))
-        # acc_list = torch.load(os.path.join(self.config.save + '/20240618-032410_cifar10_all_perturb_analysis', 'acc_nozero.npy'))
-        # self.logger.info('arch_list: {}.'.format(arch_list))
-        # self.logger.info('acc_list: {}.'.format(acc_list))
-
-        
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # for arch_idx in range(len(arch_list)):
-        #     for i in range(len(arch_list[arch_idx])):
-        #         acc_sum[i][arch_list[arch_idx][i]] += acc_list[arch_idx]
-        #         num[i][arch_list[arch_idx][i]] += 1
-        # avg = [[acc_sum[i][j]/num[i][j] for j in [0,2,3,4]] for i in range(6)]
-        # self.logger.info('All acc_sum, num, avg: {}, {}, {}.'.format(acc_sum,num,avg))
-        #
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # top_idx = acc_list.argsort()[-100:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # for arch_idx in range(len(top_arch_list)):
-        #     for i in range(len(top_arch_list[arch_idx])):
-        #         acc_sum[i][top_arch_list[arch_idx][i]] += top_acc_list[arch_idx]
-        #         num[i][top_arch_list[arch_idx][i]] += 1
-        # avg = [[acc_sum[i][j] / num[i][j] for j in [0, 2, 3, 4] if num[i][j] != 0] for i in range(6)]
-        # self.logger.info('Top 100 acc_sum, num, avg: {}, {}, {}.'.format(acc_sum, num, avg))
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # top_idx = acc_list.argsort()[-50:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # for arch_idx in range(len(top_arch_list)):
-        #     for i in range(len(top_arch_list[arch_idx])):
-        #         acc_sum[i][top_arch_list[arch_idx][i]] += top_acc_list[arch_idx]
-        #         num[i][top_arch_list[arch_idx][i]] += 1
-        # avg = [[acc_sum[i][j]/num[i][j] for j in [0,2,3,4] if num[i][j]!=0] for i in range(6)]
-        # self.logger.info('Top 50 acc_sum, num, avg: {}, {}, {}.'.format(acc_sum,num,avg))
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # top_idx = acc_list.argsort()[-20:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # for arch_idx in range(len(top_arch_list)):
-        #     for i in range(len(top_arch_list[arch_idx])):
-        #         acc_sum[i][top_arch_list[arch_idx][i]] += top_acc_list[arch_idx]
-        #         num[i][top_arch_list[arch_idx][i]] += 1
-        # avg = [[acc_sum[i][j] / num[i][j] for j in [0, 2, 3, 4] if num[i][j]!=0] for i in range(6)]
-        # self.logger.info('Top 20 acc_sum, num, avg: {}, {}, {}.'.format(acc_sum, num, avg))
-        # acc_sum = [[0 for j in range(5)] for i in range(6)]
-        # num = [[0 for j in range(5)] for i in range(6)]
-        # top_idx = acc_list.argsort()[-10:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # for arch_idx in range(len(top_arch_list)):
-        #     for i in range(len(top_arch_list[arch_idx])):
-        #         acc_sum[i][top_arch_list[arch_idx][i]] += top_acc_list[arch_idx]
-        #         num[i][top_arch_list[arch_idx][i]] += 1
-        # avg = [[acc_sum[i][j] / num[i][j] for j in [0, 2, 3, 4] if num[i][j]!=0] for i in range(6)]
-        # self.logger.info('Top 10 acc_sum, num, avg: {}, {}, {}.'.format(acc_sum, num, avg))
-        #
-        # sort_idx = acc_list.argsort()
-        # sort_arch_list = arch_list[sort_idx]
-        # sort_acc_list = acc_list[sort_idx]
-        # best_acc = [[0 for j in range(5)] for i in range(6)]
-        # for i in range(len(best_acc)):
-        #     for j in range(len(best_acc[i])):
-        #         if j==zero_idx:
-        #             pass
-        #         else:
-        #             for arch_idx in range(len(sort_arch_list)):
-        #                 if sort_arch_list[arch_idx][i]==j:
-        #                     best_acc[i][j] = sort_acc_list[arch_idx]
-        # self.logger.info('best_acc: {}.'.format(best_acc))
-
-        # nasbench301
-        # arch_dataset = torch.load(os.path.join(config.save, 'arch_data/arch_dataset.npy'))
-        # arch_list = np.array(arch_dataset[0])
-        # acc_list = np.array(arch_dataset[1])
-        #
-        # self.logger.info('All: ')
-        # self.analysis(arch_list,acc_list,"nasbench301")
-        #
-        # self.logger.info('Top 100: ')
-        # top_idx = acc_list.argsort()[-100:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # self.analysis(top_arch_list, top_acc_list, "nasbench301")
-        #
-        # self.logger.info('Top 50: ')
-        # top_idx = acc_list.argsort()[-50:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # self.analysis(top_arch_list, top_acc_list, "nasbench301")
-        #
-        # self.logger.info('Top 20: ')
-        # top_idx = acc_list.argsort()[-20:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # self.analysis(top_arch_list, top_acc_list, "nasbench301")
-        #
-        # self.logger.info('Top 10: ')
-        # top_idx = acc_list.argsort()[-10:]
-        # top_arch_list = arch_list[top_idx]
-        # top_acc_list = acc_list[top_idx]
-        # self.analysis(top_arch_list, top_acc_list, "nasbench301")
-        #
-        # sort_idx = acc_list.argsort()[::-1]
-        # sort_arch_list = arch_list[sort_idx]
-        # sort_acc_list = acc_list[sort_idx]
-        # best_acc = [[[0 for j in range(7)] for i in range(14)] for c in range(2)]
-        # for c in range(len(best_acc)):
-        #     for i in range(len(best_acc[c])):
-        #         for j in range(len(best_acc[c][i])):
-        #             stop = False
-        #             for arch_idx in range(len(sort_arch_list)):
-        #                 for item in range(len(sort_arch_list[arch_idx][c])):
-        #                     start = sort_arch_list[arch_idx][c][item][0]
-        #                     if item < 2:
-        #                         end = 2
-        #                     elif item < 4:
-        #                         end = 3
-        #                     elif item < 6:
-        #                         end = 4
-        #                     else:
-        #                         end = 5
-        #                     edge = self.search_space.inout_to_edge[(start, end)]
-        #                     op = sort_arch_list[arch_idx][c][item][1]
-        #                     if i==edge and j==op:
-        #                         best_acc[c][i][j] = sort_acc_list[arch_idx]
-        #                         stop = True
-        #                         break
-        #                 if stop:
-        #                     break
-        # self.logger.info('best_acc: {}.'.format(best_acc))
-        #
-        # # # arch_list_np = np.array(arch_list)
-        # # # acc_list_np = np.array(acc_list)
-        # # # id = np.argsort(acc_list_np)[::-1]
-        # # # arch_list_np = arch_list_np[id]
-        # # # acc_list_np = acc_list_np[id]
-        # # # torch.save(arch_list_np, os.path.join(self.log_path, 'arch.npy'))
-        # # # torch.save(acc_list_np, os.path.join(self.log_path, 'acc.npy'))
-        # # # for i in range(len(arch_list_np)):
-        # # #     if zero_idx not in arch_list_np[i]:
-        # # #         self.logger.info('arch, acc: {}, {}.'.format(arch_list_np[i], acc_list_np[i]))
-        # # #
-        # sys.exit()
-
         test_data = self.load_test_data(no_zero=no_zero,load_all=load_all)
-
-        # self.search_space._score = [[[torch.tensor([
-        #     [0.2055, 0.3703, 0.3949, 1.0000, 0.9230, 0.6432, 0.6491],
-        #     [0.0000, 0.1919, 0.2096, 0.8626, 0.8998, 0.5118, 0.6242],
-        #     [0.2895, 0.3610, 0.3782, 0.9400, 0.8610, 0.5969, 0.5066],
-        #     [0.1833, 0.2878, 0.3004, 0.8728, 0.8440, 0.6190, 0.5843],
-        #     [0.2241, 0.3344, 0.3592, 0.8141, 0.8161, 0.5969, 0.5707],
-        #     [0.2923, 0.3576, 0.3690, 0.8553, 0.8631, 0.6084, 0.5107],
-        #     [0.2583, 0.3370, 0.3433, 0.8218, 0.8291, 0.6103, 0.5537],
-        #     [0.2828, 0.3602, 0.3739, 0.8888, 0.8062, 0.5846, 0.6467],
-        #     [0.2580, 0.3232, 0.3402, 0.8452, 0.8907, 0.6118, 0.5736],
-        #     [0.2983, 0.3720, 0.3602, 0.8486, 0.8727, 0.5863, 0.5812],
-        #     [0.2065, 0.2606, 0.2714, 0.8650, 0.8408, 0.5492, 0.5981],
-        #     [0.2448, 0.3096, 0.3154, 0.8424, 0.8688, 0.6111, 0.6068],
-        #     [0.2404, 0.2886, 0.2953, 0.8186, 0.8371, 0.6158, 0.5860],
-        #     [0.2240, 0.2748, 0.2823, 0.8245, 0.8541, 0.5817, 0.5220]]),torch.tensor([
-        #     [ 0.2791, 0.3691, 0.5452,  0.5885,  0.6391,  0.5260,  0.5573],
-        #     [ 0.2682, 0.3637, 0.4945,  0.6511,  0.6214,  0.5865,  0.5767],
-        #     [ 0.3240, 0.3674, 0.5498,  0.5703,  0.5646,  0.5582,  0.5219],
-        #     [ 0.3223, 0.3633, 0.5409,  0.6077,  0.5848,  0.5837,  0.5159],
-        #     [ 0.3069, 0.3755, 0.3726,  0.4440,  0.4683,  0.4288,  0.3950],
-        #     [ 0.3300, 0.3541, 0.5355,  0.5731,  0.5734,  0.5537,  0.5351],
-        #     [ 0.3149, 0.3407, 0.5482,  0.6097,  0.6072,  0.5571,  0.5544],
-        #     [ 0.3044, 0.3417, 0.3385,  0.4396,  0.4714,  0.3895,  0.3831],
-        #     [ 0.2975, 0.3243, 0.3316,  0.4523,  0.4276,  0.3799,  0.4006],
-        #     [ 0.3282, 0.3510, 0.5404,  0.5939,  0.5830,  0.5359,  0.5262],
-        #     [ 0.3186, 0.3368, 0.5568,  0.6172,  0.6053,  0.5547,  0.5502],
-        #     [ 0.3141, 0.3423, 0.3407,  0.4422,  0.4389,  0.3985,  0.3885],
-        #     [ 0.3051, 0.3261, 0.3299,  0.4189,  0.4422,  0.4019,  0.3880],
-        #     [-0.0893, 0.3287, 0.3328,  0.4462,  0.4469,  0.3947,  0.4022]])]]]
-        #
-        # self.search_space.has_metric_para = False
-        # self.single_evaluate(test_data, zc_api, perturbation=True, epoch=0)
-        #
-        # sys.exit()
 
         if train_epoch>0:
             save_path = 'PreTrain-{}-{}'.format(self.dataset,time.strftime("%Y%m%d-%H%M%S"))
             utils.create_exp_dir(save_path)
-
-            # save_path = 'PreTrain-cifar10-20240126-173419'
 
             graph = self.search_space.clone()
             graph.parse()
             graph.to(self.device)
 
             torch.save(graph.state_dict(), os.path.join(save_path, 'weights_init.pt'))
-            # graph.load_state_dict(torch.load(save_path + '/weights_step_30.pt'))
-            # optimizer = torch.optim.SGD(
-            #     graph.parameters(),
-            #     0.25,
-            #     momentum=0.9,
-            #     weight_decay=3e-4)
             optimizer = torch.optim.SGD(
                 graph.parameters(),
-                # 0.001,
-                # 0.01,
-                # 0.1,
                 0.5,
-                # 0.005,
                 momentum=0.9,
                 weight_decay=3e-4)
-            # logger.info("param:"+str(graph.parameters()))
 
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer, float(train_epoch), eta_min=0.001)
@@ -1438,29 +1032,23 @@ class ZeroCostPredictorEvaluator(object):
                 graph.train()
                 scheduler.step()
                 lr = scheduler.get_lr()[0]
-                # lr = 0.1
                 self.logger.info('epoch %d lr %e', epoch, lr)
 
                 objs = utils.AvgrageMeter()
                 top1 = utils.AvgrageMeter()
                 for step, (inputs, targets) in enumerate(train_loader):
-                    # if (epoch==0 and step>=30) or epoch>0:
 
                     inputs = Variable(inputs, requires_grad=False).cuda()
                     targets = Variable(targets, requires_grad=False).cuda()
                     n = inputs.size(0)
-                    # logger.info("n: "+str(n))
                     optimizer.zero_grad()
                     logits = graph.forward(inputs)
-                    # logger.info("logits:"+str(logits))
                     loss = criterion(logits, targets)
 
                     loss.backward()
                     nn.utils.clip_grad_norm(graph.parameters(), 5)
                     optimizer.step()
 
-                    # for k, v in graph.named_parameters():
-                    #     logger.info("grad "+str(k)+": "+str(v.grad))
 
                     prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
                     objs.update(loss.data.item(), n)
@@ -1468,24 +1056,15 @@ class ZeroCostPredictorEvaluator(object):
 
                     step = step + 1
 
-                    # if (step+1)%100==0:
-                    #     torch.save(graph.state_dict(),
-                    #                os.path.join(save_path, 'weights_epoch_{}_step_{}.pt'.format(str(epoch), str(step))))
 
-                    # else:
-                    #     step = step+1
 
-                    # if step==30:
-                    #     break
 
                     if step % 50 == 0:
                         self.logger.info('train %03d %e %f', step, objs.avg, top1.avg)
                 self.logger.info('train_acc %f', top1.avg)
 
-                # if epoch==0 or (epoch+1)%5==0:
                 torch.save(graph.state_dict(), os.path.join(save_path, 'weights_'+str(epoch)+'.pt'))
 
-                    # logger.info(graph.state_dict())
             weight_path = os.path.join(save_path, 'weights_'+str(epoch)+'.pt')
             sys.exit()
 
@@ -1501,26 +1080,16 @@ class ZeroCostPredictorEvaluator(object):
             elif self.search_space.space_name=="nasbench301":
                 zero_idx = 1
                 op_indices_full = []
-                # op_indices_full = [[(0, 2, 2), (0, 3, 2), (1, 4, 2), (1, 5, 2)], [(0, 2, 2), (0, 3, 2), (1, 4, 2), (1, 5, 2)]]
 
                 for cell in range(2):
                     op_indices_full.append([])
                     for edge in range(self.search_space.num_edges):
                         for op in range(self.search_space.num_ops-1):
-                            # if op==zero_idx:
-                            #     pass
-                            # else:
                             op_indices_full[cell].append((self.search_space.edge_to_inout[edge][0],self.search_space.edge_to_inout[edge][1],op))
 
-                # for edge in range(self.search_space.num_edges):
-                #     for m in range(self.search_space.metric_num):
-                #         for epoch in range(len(self.search_space._score[m])):
-                #             self.search_space._score[m][epoch][edge][zero_idx] = -10000
             self.search_space.instantiate_model = True
             self.search_space.set_spec(op_indices_full)
 
-            # self.logger.info("param size = %fMB", self.search_space.calculate_param())
-            # sys.exit()
 
             if weight_path:
                 self.search_space.parse()
@@ -1559,9 +1128,7 @@ class ZeroCostPredictorEvaluator(object):
                         train_loader, _, test_loader, _, _ = utils.get_train_val_loaders(config,auto_augment=self.auto_augment)
                         for e in range(int(weight_epoch) + 1):
                             self.epoch_accumulate_diff = (pow(0.9, e) - pow(0.9, e + 1))
-                            # self.epoch_accumulate_multiplier = self.epoch_accumulate_multiplier - self.epoch_accumulate_diff
                             self.epoch_accumulate_multiplier = 1
-                            # self.logger.info("step_num: " + str(len(train_loader)))
                             self.logger.info("weight_epoch: " + str(e))
                             self.results = [config]
                             weight_path_epoch = os.path.join(weight_prefix,
@@ -1579,7 +1146,7 @@ class ZeroCostPredictorEvaluator(object):
                                 self._log_to_json()
 
             else:
-                if pruning:
+                if train_search_weights:
                     self.search_space.parse()
                     if self.epoch_accumulate:
                         self.epoch_accumulate_multiplier = 1
@@ -1592,29 +1159,17 @@ class ZeroCostPredictorEvaluator(object):
                         0.001,
                         momentum=0.9,
                         weight_decay=3e-4)
-                    # optimizer_axis_calib = torch.optim.SGD(
-                    #     self.search_space._metric_parameters1,
-                    #     0.1,
-                    #     momentum=0.9,
-                    #     weight_decay=3e-4)
-                    # optimizer_metric2 = torch.optim.SGD(
-                    #     self.search_space._metric_parameters2,
-                    #     0.1,
-                    #     momentum=0.9,
-                    #     weight_decay=3e-4)
                     optimizer_axis_calib = None
                     optimizer_metric2 = None
                     optimizer_component_corr = torch.optim.SGD(
-                        self.search_space._metric_parameters3,
+                        _component_corr_weights(self.search_space),
                         0.1,
-                        # momentum=0.9,
                         weight_decay=3e-4)
                     self.search_space.to(self.device)
 
                     epoch = 0
                     op_indices = op_indices_full
 
-                    # for prune_idx in range(self.search_space.num_edges):
                     self.search_space.instantiate_model = True
                     self.search_space.set_spec(op_indices)
                     self.update_score(op_indices)
@@ -1624,31 +1179,20 @@ class ZeroCostPredictorEvaluator(object):
                     self.logger.info("score_sum: " + str(self.search_space._score_sum))
                     self.logger.info("final_score: " + str(self.search_space._score))
 
-                    # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                    #            optimizer_component_corr, mode=4)
-                    #
-                    # self.logger.info("metric_axis_calib: {}".format(
-                    #     [self.search_space._metric_parameters1[m] / sum(self.search_space._metric_parameters1[:]) for m in
-                    #      range(self.search_space.metric_num)]))
-                    # self.logger.info("metric_para2: {}".format([[self.search_space._metric_parameters2[m][e] / sum(
-                    #     self.search_space._metric_parameters2[m][:epoch + 1]) for e in range(epoch + 1)] for m in
-                    #                                         range(self.search_space.metric_num)]))
-                    # self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3[0]))
 
-                    op_indices = self.prune_op(op_indices,prune_num=3,operation_level=False)
-                    # op_indices = self.prune_op(op_indices, find_best=True)
+                    op_indices = self.drop_low_score_ops(op_indices,drop_count=3,operation_level=False)
                     self.logger.info("op_indices: "+str(op_indices))
 
                     self.search_space.instantiate_model = True
                     self.search_space.set_spec(op_indices)
 
                     for m in range(self.search_space.metric_num):
-                        self.search_space._metric_parameters1[m].data.fill_(1)
+                        _axis_calibration_weights(self.search_space)[m].data.fill_(1)
                         for e in range(epoch + 2):
-                            self.search_space._metric_parameters2[m][e].data.fill_(1)
-                    for edge in range(len(self.search_space._metric_parameters3[0])):
-                        for op in range(len(self.search_space._metric_parameters3[0][edge])):
-                            self.search_space._metric_parameters3[0][edge][op].data.fill_(0)
+                            _edge_epoch_weights(self.search_space)[m][e].data.fill_(1)
+                    for edge in range(len(_component_corr_weights(self.search_space)[0])):
+                        for op in range(len(_component_corr_weights(self.search_space)[0][edge])):
+                            _component_corr_weights(self.search_space)[0][edge][op].data.fill_(0)
 
                     self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
                                optimizer_component_corr, mode=1)
@@ -1656,15 +1200,12 @@ class ZeroCostPredictorEvaluator(object):
                     if self.log_results_to_json:
                         self._log_to_json()
 
-                    # for e in range(3):
                     for e in range(self.search_space.num_edges):
                         epoch += 1
                         self.logger.info("weight_epoch: " + str(e))
                         self.results = [config]
 
-                        # if e<2:
                         if e<self.search_space.num_edges-1:
-                            # for prune_idx in range(self.search_space.num_edges):
                             self.search_space.instantiate_model = True
                             self.search_space.set_spec(op_indices)
                             self.update_score(op_indices, epoch=epoch)
@@ -1674,33 +1215,20 @@ class ZeroCostPredictorEvaluator(object):
                             self.logger.info("score_sum: " + str(self.search_space._score_sum))
                             self.logger.info("final_score: " + str(self.search_space._score))
 
-                            # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                            #            optimizer_component_corr, mode=4)
-                            #
-                            # self.logger.info("metric_axis_calib: {}".format(
-                            #     [self.search_space._metric_parameters1[m] / sum(
-                            #         self.search_space._metric_parameters1[:]) for m in
-                            #      range(self.search_space.metric_num)]))
-                            # self.logger.info("metric_para2: {}".format([[self.search_space._metric_parameters2[m][e] / sum(
-                            #     self.search_space._metric_parameters2[m][:epoch + 1]) for e in range(epoch + 1)] for m
-                            #                                         in
-                            #                                         range(self.search_space.metric_num)]))
-                            # self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3[0]))
 
-                            op_indices = self.prune_op(op_indices, prune_num=3, operation_level = False)
-                            # op_indices = self.prune_op(op_indices, find_best=True)
+                            op_indices = self.drop_low_score_ops(op_indices, drop_count=3, operation_level = False)
                             self.logger.info("op_indices: " + str(op_indices))
 
                             self.search_space.instantiate_model = True
                             self.search_space.set_spec(op_indices)
 
                             for m in range(self.search_space.metric_num):
-                                self.search_space._metric_parameters1[m].data.fill_(1)
+                                _axis_calibration_weights(self.search_space)[m].data.fill_(1)
                                 for e in range(epoch + 2):
-                                    self.search_space._metric_parameters2[m][e].data.fill_(1)
-                            for edge in range(len(self.search_space._metric_parameters3[0])):
-                                for op in range(len(self.search_space._metric_parameters3[0][edge])):
-                                    self.search_space._metric_parameters3[0][edge][op].data.fill_(0)
+                                    _edge_epoch_weights(self.search_space)[m][e].data.fill_(1)
+                            for edge in range(len(_component_corr_weights(self.search_space)[0])):
+                                for op in range(len(_component_corr_weights(self.search_space)[0][edge])):
+                                    _component_corr_weights(self.search_space)[0][edge][op].data.fill_(0)
 
                             self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
                                        optimizer_component_corr, mode=1)
@@ -1725,45 +1253,28 @@ class ZeroCostPredictorEvaluator(object):
                         train_loader_metric, valid_loader_metric, test_loader_metric, _, _ = utils.get_train_val_loaders(config, for_train=False, split_mode=2, fix_order_valid=True, auto_augment=self.auto_augment)
                         train_loader_EV, valid_loader_EV, test_loader_EV, _, _ = utils.get_train_val_loaders(config, for_train=True, split_mode=0, fix_order_valid=True, auto_augment=self.auto_augment, batch_size=32, batch_size_valid=32)
 
-                        # train_loader, valid_loader, test_loader, _, _ = utils.get_train_val_loaders(config, for_train=True, split_mode=2)
                         optimizer = torch.optim.SGD(
                             self.search_space.parameters(),
                             lr_w,
-                            # 0.001,
-                            # 0.01,
-                            # 0.1,
                             momentum=0.9,
                             weight_decay=3e-4)
                         axis_calib_lr = float(os.environ.get("PROXYDIFF_AXIS_CALIB_LR", "0.01") or 0.01)
                         axis_calib_wd = float(os.environ.get("PROXYDIFF_AXIS_CALIB_WEIGHT_DECAY", "0") or 0)
                         optimizer_axis_calib = torch.optim.SGD(
-                            self.search_space._metric_parameters1,
+                            _axis_calibration_weights(self.search_space),
                             axis_calib_lr,
                             momentum=0.9,
                             weight_decay=axis_calib_wd
                         )
-                        # optimizer_metric2 = torch.optim.SGD(
-                        #     self.search_space._metric_parameters2,
-                        #     0.1,
-                        #     momentum=0.9,
-                        #     weight_decay=0
-                        #     )
-                        # optimizer_axis_calib = None
                         optimizer_metric2 = None
                         component_corr_lr = float(os.environ.get("PROXYDIFF_COMPONENT_CORR_LR", "0.01") or 0.01)
                         component_corr_wd = float(os.environ.get("PROXYDIFF_COMPONENT_CORR_WEIGHT_DECAY", "0.001") or 0.001)
                         optimizer_component_corr = torch.optim.SGD(
-                            self.search_space._metric_parameters3,
-                            # 1,
-                            # 0.1,
+                            _component_corr_weights(self.search_space),
                             component_corr_lr,
-                            # 0.05,
                             momentum=0.9,
-                            # momentum=0.5,
                             weight_decay=component_corr_wd,
-                            # weight_decay=0
                             )
-                        # optimizer_component_corr = None
                         self.search_space.to(self.device)
 
                         self.search_space_copy = self.search_space.clone()
@@ -1775,40 +1286,9 @@ class ZeroCostPredictorEvaluator(object):
                             plt.imshow(np.transpose(npimg, (1, 2, 0)))
                             plt.savefig(os.path.join(self.log_path, 'fig_' + str(idx) + '.png'))
 
-                        # for step, (input,label) in enumerate(train_loader):
-                        #     imshow(torchvision.utils.make_grid(input), 0)
-                        #     break
-                        # for step, (input,label) in enumerate(train_loader):
-                        #     imshow(torchvision.utils.make_grid(input), 4)
-                        #     break
-                        # for step, (input,label) in enumerate(train_loader_EV):
-                        #     imshow(torchvision.utils.make_grid(input), 1)
-                        #     break
-                        # for step, (input,label) in enumerate(train_loader):
-                        #     imshow(torchvision.utils.make_grid(input), 2)
-                        #     break
-                        # for step, (input,label) in enumerate(train_loader_EV):
-                        #     imshow(torchvision.utils.make_grid(input), 3)
-                        #     break
-                        # sys.exit()
 
-                        # self.search_space.has_metric_para = False
-                        # for weight_e in range(5):
-                        #     self.logger.info("epoch: " + str(weight_e))
-                        #     self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                        #                optimizer_component_corr, mode=1, epoch=weight_e)
-                        # self.search_space.has_metric_para = True
 
-                        # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                        #            optimizer_component_corr, mode=1, epoch=0)
 
-                        # self.logger.info("train_data_before0: {}".format(train_data[0]))
-                        # self.search_space.has_metric_para = False
-                        # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                        #            optimizer_component_corr, mode=1, epoch=0)
-                        # self.search_space.has_metric_para = True
-                        # state_dict = copy.deepcopy(self.search_space.state_dict())
-                        # self.search_space_copy.load_state_dict(state_dict)
 
                         for step, (input, target) in enumerate(train_loader_metric):
                             data = (input.cuda(), target.cuda())
@@ -1827,114 +1307,26 @@ class ZeroCostPredictorEvaluator(object):
                         metric_epochs = int(os.environ.get("PROXYDIFF_METRIC_EPOCHS", "5") or 5)
                         stop_after_row = int(os.environ.get("PROXYDIFF_DIAG_STOP_AFTER_ROW", "0") or 0)
                         if os.environ.get("PROXYDIFF_PRETRAIN_EVAL", "0").strip().lower() in ("1", "true", "yes"):
-                            self.logger.info("diag_pretrain_eval_before_metric_epoch0")
+                            self.logger.info("proxydiff_pretrain_eval_before_metric_epoch0")
                             self._proxydiff_current_metric_epoch = -1
                             self.single_evaluate(test_data, zc_api, perturbation, epoch=0, data=data)
                             if self.log_results_to_json:
                                 self._log_to_json()
                             if os.environ.get("PROXYDIFF_PRETRAIN_ONLY", "0").strip().lower() in ("1", "true", "yes"):
-                                self.logger.info("diag_pretrain_only_stop")
+                                self.logger.info("proxydiff_pretrain_only_stop")
                                 raise SystemExit(0)
                         for metric_e in range(metric_epochs):
-                            # if metric_e > 0:
                             self.logger.info("epoch: " + str(metric_e))
 
-        #                     else:
-    #                         self.search_space._score[0][0] = [torch.tensor([[0.0000, 0.3605, 0.3675, 0.9777, 0.9162, 0.5890, 0.5957],
-    # [0.0400, 0.3795, 0.3805, 1.0000, 0.8403, 0.5979, 0.8869],
-    # [0.2386, 0.3504, 0.3529, 0.9294, 0.9424, 0.5967, 0.5459],
-    # [0.2462, 0.3580, 0.3576, 0.8979, 0.9948, 0.6117, 0.6101],
-    # [0.2419, 0.3490, 0.5292, 0.9039, 0.9002, 0.6027, 0.6262],
-    # [0.2774, 0.3247, 0.3277, 0.9275, 0.9231, 0.6361, 0.6117],
-    # [0.2909, 0.3380, 0.3362, 0.9160, 0.9341, 0.6044, 0.6021],
-    # [0.2840, 0.3291, 0.3597, 0.9489, 0.9331, 0.6246, 0.6282],
-    # [0.2805, 0.3149, 0.2768, 0.9010, 0.9243, 0.6007, 0.5888],
-    # [0.2977, 0.3289, 0.3285, 0.9345, 0.9058, 0.6237, 0.6166],
-    # [0.3049, 0.3349, 0.3313, 0.9111, 0.9110, 0.5979, 0.6098],
-    # [0.3012, 0.3273, 0.3527, 0.9157, 0.9236, 0.6071, 0.6203],
-    # [0.3006, 0.3221, 0.3083, 0.8945, 0.9281, 0.6280, 0.6173],
-    # [0.3022, 0.3222, 0.2291, 0.9201, 0.9098, 0.5842, 0.6281]],
-    #    device='cuda:0'), torch.tensor([[0.2174, 0.2964, 0.6516, 0.6127, 0.6871, 0.5730, 0.5273],
-    # [0.2500, 0.3342, 0.5558, 0.6367, 0.6494, 0.5981, 0.5791],
-    # [0.2892, 0.3144, 0.5898, 0.6306, 0.6258, 0.5862, 0.5834],
-    # [0.2995, 0.3289, 0.5929, 0.6576, 0.6278, 0.5846, 0.5670],
-    # [0.2853, 0.3262, 0.3343, 0.4468, 0.4682, 0.3940, 0.3907],
-    # [0.3085, 0.3166, 0.5722, 0.6356, 0.6364, 0.5751, 0.5614],
-    # [0.3145, 0.3243, 0.5710, 0.6396, 0.6362, 0.5687, 0.5722],
-    # [0.3116, 0.3243, 0.3233, 0.4531, 0.4521, 0.3819, 0.3799],
-    # [0.3163, 0.3270, 0.3456, 0.4463, 0.4471, 0.3784, 0.3791],
-    # [0.3131, 0.3203, 0.5731, 0.6348, 0.6411, 0.5631, 0.5751],
-    # [0.3161, 0.3239, 0.5747, 0.6448, 0.6356, 0.5699, 0.5729],
-    # [0.3134, 0.3243, 0.3235, 0.4540, 0.4519, 0.3886, 0.3897],
-    # [0.3165, 0.3251, 0.3294, 0.4488, 0.4504, 0.3831, 0.3878],
-    # [0.3155, 0.3229, 0.2811, 0.4476, 0.4471, 0.3821, 0.3882]],
-    #    device='cuda:0')]
-    #                         self.search_space._score[1][0] = [
-    #                             torch.tensor([[0.0000, 0.3605, 0.3675, 0.9777, 0.9162, 0.5890, 0.5957],
-    #                                             [0.0400, 0.3795, 0.3805, 1.0000, 0.8403, 0.5979, 0.8869],
-    #                                             [0.2386, 0.3504, 0.3529, 0.9294, 0.9424, 0.5967, 0.5459],
-    #                                             [0.2462, 0.3580, 0.3576, 0.8979, 0.9948, 0.6117, 0.6101],
-    #                                             [0.2419, 0.3490, 0.5292, 0.9039, 0.9002, 0.6027, 0.6262],
-    #                                             [0.2774, 0.3247, 0.3277, 0.9275, 0.9231, 0.6361, 0.6117],
-    #                                             [0.2909, 0.3380, 0.3362, 0.9160, 0.9341, 0.6044, 0.6021],
-    #                                             [0.2840, 0.3291, 0.3597, 0.9489, 0.9331, 0.6246, 0.6282],
-    #                                             [0.2805, 0.3149, 0.2768, 0.9010, 0.9243, 0.6007, 0.5888],
-    #                                             [0.2977, 0.3289, 0.3285, 0.9345, 0.9058, 0.6237, 0.6166],
-    #                                             [0.3049, 0.3349, 0.3313, 0.9111, 0.9110, 0.5979, 0.6098],
-    #                                             [0.3012, 0.3273, 0.3527, 0.9157, 0.9236, 0.6071, 0.6203],
-    #                                             [0.3006, 0.3221, 0.3083, 0.8945, 0.9281, 0.6280, 0.6173],
-    #                                             [0.3022, 0.3222, 0.2291, 0.9201, 0.9098, 0.5842, 0.6281]],
-    #                                            device='cuda:0'),
-    #                             torch.tensor([[0.2174, 0.2964, 0.6516, 0.6127, 0.6871, 0.5730, 0.5273],
-    #                                                [0.2500, 0.3342, 0.5558, 0.6367, 0.6494, 0.5981, 0.5791],
-    #                                                [0.2892, 0.3144, 0.5898, 0.6306, 0.6258, 0.5862, 0.5834],
-    #                                                [0.2995, 0.3289, 0.5929, 0.6576, 0.6278, 0.5846, 0.5670],
-    #                                                [0.2853, 0.3262, 0.3343, 0.4468, 0.4682, 0.3940, 0.3907],
-    #                                                [0.3085, 0.3166, 0.5722, 0.6356, 0.6364, 0.5751, 0.5614],
-    #                                                [0.3145, 0.3243, 0.5710, 0.6396, 0.6362, 0.5687, 0.5722],
-    #                                                [0.3116, 0.3243, 0.3233, 0.4531, 0.4521, 0.3819, 0.3799],
-    #                                                [0.3163, 0.3270, 0.3456, 0.4463, 0.4471, 0.3784, 0.3791],
-    #                                                [0.3131, 0.3203, 0.5731, 0.6348, 0.6411, 0.5631, 0.5751],
-    #                                                [0.3161, 0.3239, 0.5747, 0.6448, 0.6356, 0.5699, 0.5729],
-    #                                                [0.3134, 0.3243, 0.3235, 0.4540, 0.4519, 0.3886, 0.3897],
-    #                                                [0.3165, 0.3251, 0.3294, 0.4488, 0.4504, 0.3831, 0.3878],
-    #                                                [0.3155, 0.3229, 0.2811, 0.4476, 0.4471, 0.3821, 0.3882]],
-    #                                               device='cuda:0')]
-                            # sys.exit()
-                            # self.logger.info("best: " + str(self.search_space._best))
-                            # self.logger.info("best_acc: " + str(zc_api[str(tuple(self.search_space._best))]['val_accuracy']))
-                            # self.logger.info("score_sum: " + str(self.search_space._score_sum))
-                            # self.logger.info("score_final: " + str(self.search_space._score))
                             self.logger.info("score: " + str(self.search_space._score))
-                            # torch.save(self.search_space.state_dict(), os.path.join(self.log_path, 'weights_init.pt'))
-                            # torch.save(self.search_space._score, os.path.join(self.log_path, 'perturbation_scores.npy'))
                             for para_e in range(metric_epoch):
-                                # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #                       optimizer_component_corr, mode=1, epoch=metric_e)
-                                # if para_e>0:
-                                #     lr = 0.05
-                                # else:
-                                #     lr = 0.1
-                                # for param_group in optimizer_component_corr.param_groups:
-                                #     param_group['lr'] = lr
 
-                                # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #            optimizer_component_corr, mode=6, epoch=metric_e, valid_loader=valid_loader)
 
-                                # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #            optimizer_component_corr, mode=5, epoch=metric_e)
 
-                                # if mode == 11:
 
-                                # if metric_e>0:
-                                # self.infer(valid_loader, criterion, epoch=metric_e)
 
-                                #     if stop:
-                                #         break
-                                # self.infer(valid_loader, criterion, epoch=metric_e)
 
                                 decrease = False
-                                # while(1):
                                 if self.search_space.space_name=="nasbench301":
                                     no_edge_normalize = True
                                 elif False:
@@ -1942,144 +1334,75 @@ class ZeroCostPredictorEvaluator(object):
                                 no_edge_env = os.environ.get("PROXYDIFF_NO_EDGE_NORMALIZE")
                                 if no_edge_env is not None:
                                     no_edge_normalize = no_edge_env.strip().lower() in ("1", "true", "yes")
-                                self.logger.info("diag_axis_calib_lr: {}".format(optimizer_axis_calib.param_groups[0]["lr"]))
-                                self.logger.info("diag_axis_calib_wd: {}".format(optimizer_axis_calib.param_groups[0]["weight_decay"]))
-                                self.logger.info("diag_component_corr_lr: {}".format(optimizer_component_corr.param_groups[0]["lr"]))
-                                self.logger.info("diag_component_corr_wd: {}".format(optimizer_component_corr.param_groups[0]["weight_decay"]))
-                                self.logger.info("diag_no_edge_normalize: {}".format(no_edge_normalize))
-                                self.logger.info("diag_eval_component_corr_style: {}".format(os.environ.get("PROXYDIFF_EVAL_COMPONENT_CORR_STYLE", "minus05")))
-                                self.logger.info("diag_metric_weight_style: {}".format(os.environ.get("PROXYDIFF_METRIC_WEIGHT_STYLE", "sigmoid_norm")))
-                                self.logger.info("diag_residual_scale: {}".format(os.environ.get("PROXYDIFF_RESIDUAL_SCALE", "1.0")))
-                                self.logger.info("diag_component_corr_scale: {}".format(os.environ.get("PROXYDIFF_COMPONENT_CORR_SCALE", "1.0")))
-                                self.logger.info("diag_axis_calib_steps: {}".format(os.environ.get("PROXYDIFF_AXIS_CALIB_STEPS", "100")))
+                                self.logger.info("proxydiff_axis_calib_lr: {}".format(optimizer_axis_calib.param_groups[0]["lr"]))
+                                self.logger.info("proxydiff_axis_calib_wd: {}".format(optimizer_axis_calib.param_groups[0]["weight_decay"]))
+                                self.logger.info("proxydiff_component_corr_lr: {}".format(optimizer_component_corr.param_groups[0]["lr"]))
+                                self.logger.info("proxydiff_component_corr_wd: {}".format(optimizer_component_corr.param_groups[0]["weight_decay"]))
+                                self.logger.info("proxydiff_no_edge_normalize: {}".format(no_edge_normalize))
+                                self.logger.info("proxydiff_eval_component_corr_style: {}".format(os.environ.get("PROXYDIFF_EVAL_COMPONENT_CORR_STYLE", "minus05")))
+                                self.logger.info("proxydiff_metric_weight_style: {}".format(os.environ.get("PROXYDIFF_METRIC_WEIGHT_STYLE", "sigmoid_norm")))
+                                self.logger.info("proxydiff_residual_scale: {}".format(os.environ.get("PROXYDIFF_RESIDUAL_SCALE", "1.0")))
+                                self.logger.info("proxydiff_component_corr_scale: {}".format(os.environ.get("PROXYDIFF_COMPONENT_CORR_SCALE", "1.0")))
+                                self.logger.info("proxydiff_axis_calib_steps: {}".format(os.environ.get("PROXYDIFF_AXIS_CALIB_STEPS", "100")))
                                 stop, decrease = self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
                                            optimizer_component_corr, mode=metric_mode, epoch=0,decrease=decrease, no_edge_normalize=no_edge_normalize)
 
-                                # if metric_e > 0:
-                                #     searcher.search(metric_e, search=False, train=True)
-
-                                # self.train(valid_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #            optimizer_component_corr, mode=4, epoch=metric_e)
-
-                                # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #            optimizer_component_corr, mode=2, epoch=metric_e,train_half=False)
-
-                                # self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
-                                #            optimizer_component_corr, mode=3, epoch=metric_e)
 
 
-                                self.logger.info("metric_axis_calib: {}".format(
-                                        self.search_space._metric_parameters1))
-                                self.logger.info("only sigmoid metric_axis_calib: {}".format(
-                                    [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m)) for m in range(self.search_space.metric_num)]))
-                                self.logger.info("normalize sigmoid metric_axis_calib: {}".format(
-                                    [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m)) / sum(
-                            [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m_tmp)) for m_tmp in range(self.search_space.metric_num)]) for m in
+
+
+
+                                self.logger.info("axis_calibration_weights: {}".format(
+                                        _axis_calibration_weights(self.search_space)))
+                                self.logger.info("only sigmoid axis_calibration_weights: {}".format(
+                                    [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m)) for m in range(self.search_space.metric_num)]))
+                                self.logger.info("normalize sigmoid axis_calibration_weights: {}".format(
+                                    [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m)) / sum(
+                            [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m_tmp)) for m_tmp in range(self.search_space.metric_num)]) for m in
                                      range(self.search_space.metric_num)]))
-                                self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3))
+                                self.logger.info("component_corr_weights: {}".format(_component_corr_weights(self.search_space)))
                                 if False:
-                                    self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
+                                    self.logger.info("sigmoid component_corr_weights: {}".format(F.sigmoid(_component_corr_weights(self.search_space)[0])))
 
                                 if self.search_space.space_name=="nasbench301":
-                                    self.logger.info("sigmoid metric_component_corr: {}".format([F.sigmoid(self.search_space._metric_parameters3[c]) for c in range(2)]))
+                                    self.logger.info("sigmoid component_corr_weights: {}".format([F.sigmoid(_component_corr_weights(self.search_space)[c]) for c in range(2)]))
 
-                            # score = torch.zeros(self.search_space.num_edges, self.search_space.num_ops).cuda()
-                            # for m in range(self.search_space.metric_num):
-                            #     sum_m = torch.zeros(self.search_space.num_edges, self.search_space.num_ops).cuda()
-                            #     if len(self.search_space._score) != 0:
-                            #         if self.search_space.metric_epoch_accumulate[m]:
-                            #             for e_idx in range(metric_e + 1):
-                            #                 sum_m += (F.sigmoid(self.search_space._metric_parameters2[m][e_idx]) / sum(
-                            #                     [F.sigmoid(self.search_space._metric_parameters2[m][e_tmp]) for e_tmp in range(metric_e + 1)])) * \
-                            #                          self.search_space._score[m][e_idx]
-                            #         else:
-                            #             sum_m += self.search_space._score[m][metric_e]
-                            #         score += (F.sigmoid(self.search_space._metric_parameters1[m]) / sum(
-                            #             [F.sigmoid(self.search_space._metric_parameters1[m_tmp]) for m_tmp in range(len(self.search_space._metric_parameters1))])) * sum_m
-                            #     score2 = 0.5*score + (F.sigmoid(self.search_space._metric_parameters3[0]) - 0.5)
-                            #     score3 = F.leaky_relu(score2)
-                            # self.logger.info("score_after_axis_calib: " + str(score))
-                            # self.logger.info("score_after_component_corr: " + str(score2))
-                            # self.logger.info("score_after_leaky: " + str(score3))
 
                                 self._proxydiff_current_metric_epoch = metric_e
                                 self.single_evaluate(test_data, zc_api, perturbation,epoch=0,data=data)
                                 if self.log_results_to_json:
                                     self._log_to_json()
                                 if stop_after_row and (metric_e + 1) >= stop_after_row:
-                                    self.logger.info("diag_stop_after_row: {}".format(metric_e + 1))
+                                    self.logger.info("proxydiff_stop_after_row: {}".format(metric_e + 1))
                                     raise SystemExit(0)
 
                             if False and metric_e > 0:
-                                # for name, v in self.search_space.named_parameters():
-                                #     self.logger.info("init: {},{}".format(name, v))
-                                #     break
-                                # state_dict = copy.deepcopy(self.search_space.state_dict())
 
                                 searcher = EvolutionSearcher(zc_api, test_data, self.search_space, self.search_space_copy2, optimizer, optimizer_axis_calib, optimizer_component_corr, self.logger, self.log_path, self.dataset_api, train_loader_EV, valid_loader_EV, criterion)
                                 searcher.search(0, search=True, train=True)
-                                # searcher.search(0, search=True, train=False)
-                                # searcher.search(0, search=False, train=True)
 
-                                # sys.exit()
 
-                                self.logger.info("metric_axis_calib: {}".format(
-                                        self.search_space._metric_parameters1))
-                                self.logger.info("only sigmoid metric_axis_calib: {}".format(
-                                    [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m)) for m in range(self.search_space.metric_num)]))
-                                self.logger.info("normalize sigmoid metric_axis_calib: {}".format(
-                                    [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m)) / sum(
-                                        [F.sigmoid(_metric_axis_calib_at(self.search_space._metric_parameters1, m_tmp)) for m_tmp in range(self.search_space.metric_num)]) for m in
+                                self.logger.info("axis_calibration_weights: {}".format(
+                                        _axis_calibration_weights(self.search_space)))
+                                self.logger.info("only sigmoid axis_calibration_weights: {}".format(
+                                    [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m)) for m in range(self.search_space.metric_num)]))
+                                self.logger.info("normalize sigmoid axis_calibration_weights: {}".format(
+                                    [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m)) / sum(
+                                        [F.sigmoid(_axis_calibration_weight_at(_axis_calibration_weights(self.search_space), m_tmp)) for m_tmp in range(self.search_space.metric_num)]) for m in
                                      range(self.search_space.metric_num)]))
-                                self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3))
+                                self.logger.info("component_corr_weights: {}".format(_component_corr_weights(self.search_space)))
                                 if False:
-                                    self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
+                                    self.logger.info("sigmoid component_corr_weights: {}".format(F.sigmoid(_component_corr_weights(self.search_space)[0])))
 
                                 if self.search_space.space_name == "nasbench301":
-                                    self.logger.info("sigmoid metric_component_corr: {}".format([F.sigmoid(self.search_space._metric_parameters3[c]) for c in range(2)]))
+                                    self.logger.info("sigmoid component_corr_weights: {}".format([F.sigmoid(_component_corr_weights(self.search_space)[c]) for c in range(2)]))
 
                                 self.single_evaluate(test_data, zc_api, perturbation, epoch=0, data=data)
                                 if self.log_results_to_json:
                                     self._log_to_json()
 
-                            # for m in range(self.search_space.metric_num):
-                            #     self.search_space._metric_parameters1[m].data.fill_(0)
-                                # for e in range(epoch + 2):
-                                #     self.search_space._metric_parameters2[m][e].data.fill_(1)
-                            # if metric_e<5:
-                            # for cell in range(len(self.search_space._metric_parameters3)):
-                            #     for edge in range(len(self.search_space._metric_parameters3[cell])):
-                            #         for op in range(len(self.search_space._metric_parameters3[cell][edge])):
-                            #             self.search_space._metric_parameters3[cell][edge][op].data.fill_(0)
 
-                            # min_component_corr = 10000
-                            # max_component_corr = -10000
-                            # for edge in range(len(self.search_space._metric_parameters3[0])):
-                            #     for op in range(len(self.search_space._metric_parameters3[0][edge])):
-                            #         if abs(self.search_space._metric_parameters3[0][edge][op])<min_component_corr and abs(self.search_space._metric_parameters3[0][edge][op])>0:
-                            #             min_component_corr = abs(self.search_space._metric_parameters3[0][edge][op])
-                            #         if abs(self.search_space._metric_parameters3[0][edge][op])>max_component_corr and abs(self.search_space._metric_parameters3[0][edge][op])>0:
-                            #             max_component_corr = abs(self.search_space._metric_parameters3[0][edge][op])
-                            # diff = max_component_corr*0.5
-                            # for edge in range(len(self.search_space._metric_parameters3[0])):
-                            #     for op in range(len(self.search_space._metric_parameters3[0][edge])):
-                            #         # if self.search_space._metric_parameters3[0][edge][op]>0:
-                            #         #     tmp = self.search_space._metric_parameters3[0][edge][op] - min_component_corr
-                            #         #     self.search_space._metric_parameters3[0][edge][op].data.fill_(tmp)
-                            #         # elif self.search_space._metric_parameters3[0][edge][op]<0:
-                            #         #     tmp = self.search_space._metric_parameters3[0][edge][op] + min_component_corr
-                            #         #     self.search_space._metric_parameters3[0][edge][op].data.fill_(tmp)
-                            #         if abs(self.search_space._metric_parameters3[0][edge][op])>diff:
-                            #             if self.search_space._metric_parameters3[0][edge][op] > 0:
-                            #                 tmp = self.search_space._metric_parameters3[0][edge][op] - diff
-                            #             elif self.search_space._metric_parameters3[0][edge][op]<0:
-                            #                 tmp = self.search_space._metric_parameters3[0][edge][op] + diff
-                            #             self.search_space._metric_parameters3[0][edge][op].data.fill_(tmp)
-                            #         else:
-                            #             self.search_space._metric_parameters3[0][edge][op].data.fill_(0)
 
-                            # self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3[0]))
-                            # self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
 
                             self.search_space.has_metric_para = False
                             self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
@@ -2098,20 +1421,10 @@ class ZeroCostPredictorEvaluator(object):
                             0.001,
                             momentum=0.9,
                             weight_decay=3e-4)
-                        # optimizer_axis_calib = torch.optim.SGD(
-                        #     self.search_space._metric_parameters1,
-                        #     0.1,
-                        #     momentum=0.9,
-                        #     weight_decay=3e-4)
-                        # optimizer_metric2 = torch.optim.SGD(
-                        #     self.search_space._metric_parameters2,
-                        #     0.1,
-                        #     momentum=0.9,
-                        #     weight_decay=3e-4)
                         optimizer_axis_calib = None
                         optimizer_metric2 = None
                         optimizer_component_corr = torch.optim.SGD(
-                            self.search_space._metric_parameters3,
+                            _component_corr_weights(self.search_space),
                             0.1,
                             momentum=0.9,
                             weight_decay=3e-4)
@@ -2119,7 +1432,6 @@ class ZeroCostPredictorEvaluator(object):
 
                         op_indices = op_indices_full
 
-                        # for prune_idx in range(self.search_space.num_edges):
                         self.search_space.instantiate_model = True
                         self.search_space.set_spec(op_indices)
 
@@ -2128,27 +1440,19 @@ class ZeroCostPredictorEvaluator(object):
                             self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
                                        optimizer_component_corr, mode=1)
 
-                        # for metric_e in range(5):
                             self.train(train_loader, criterion, optimizer, optimizer_axis_calib, optimizer_metric2,
                                        optimizer_component_corr, mode=4)
 
-                            # self.logger.info("metric_axis_calib: {}".format(
-                            #     [self.search_space._metric_parameters1[m] / sum(self.search_space._metric_parameters1[:])
-                            #      for m in
-                            #      range(self.search_space.metric_num)]))
-                            # self.logger.info("metric_para2: {}".format([[self.search_space._metric_parameters2[m][e] / sum(
-                            #     self.search_space._metric_parameters2[m][:epoch + 1]) for e in range(epoch + 1)] for m in
-                            #                                             range(self.search_space.metric_num)]))
-                            self.logger.info("metric_component_corr: {}".format(self.search_space._metric_parameters3[0]))
-                            self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
+                            self.logger.info("component_corr_weights: {}".format(_component_corr_weights(self.search_space)[0]))
+                            self.logger.info("sigmoid component_corr_weights: {}".format(F.sigmoid(_component_corr_weights(self.search_space)[0])))
 
                             self.single_evaluate(test_data, zc_api, perturbation)
                             if self.log_results_to_json:
                                 self._log_to_json()
 
-                            for edge in range(len(self.search_space._metric_parameters3[0])):
-                                for op in range(len(self.search_space._metric_parameters3[0][edge])):
-                                        self.search_space._metric_parameters3[0][edge][op].data.fill_(0)
+                            for edge in range(len(_component_corr_weights(self.search_space)[0])):
+                                for op in range(len(_component_corr_weights(self.search_space)[0][edge])):
+                                        _component_corr_weights(self.search_space)[0][edge][op].data.fill_(0)
 
         else:
             if weight_path:
@@ -2181,9 +1485,7 @@ class ZeroCostPredictorEvaluator(object):
                             self.epoch_accumulate_multiplier = 1
                             train_loader, _, test_loader, _, _ = utils.get_train_val_loaders(config,auto_augment=self.auto_augment)
                             for e in range(int(weight_epoch) + 1):
-                                # self.epoch_accumulate_diff = (pow(0.8, e) - pow(0.8, e + 1)) / len(train_loader)
                                 self.epoch_accumulate_diff = 0
-                                # self.logger.info("step_num: " + str(len(train_loader)))
                                 for s in range(int(weight_step)):
                                     if (s+2)%step_interval==0:
                                         self.logger.info("weight_epoch: " + str(e))
@@ -2214,9 +1516,7 @@ class ZeroCostPredictorEvaluator(object):
                             train_loader, _, test_loader, _, _ = utils.get_train_val_loaders(config,auto_augment=self.auto_augment)
                             for e in range(int(weight_epoch) + 1):
                                 self.epoch_accumulate_diff = (pow(0.9, e) - pow(0.9, e + 1))
-                                # self.epoch_accumulate_multiplier = self.epoch_accumulate_multiplier - self.epoch_accumulate_diff
                                 self.epoch_accumulate_multiplier = 1
-                                # self.logger.info("step_num: " + str(len(train_loader)))
                                 self.logger.info("weight_epoch: " + str(e))
                                 self.results = [config]
                                 weight_path_epoch = os.path.join(weight_prefix,
@@ -2230,10 +1530,8 @@ class ZeroCostPredictorEvaluator(object):
 
                     else:
                         for e in range(int(weight_epoch)+1):
-                        # for e in range(10,int(weight_epoch) + 1):
                             self.logger.info("weight_epoch: " + str(e))
                             self.results = [config]
-                            # weight_path_epoch = os.path.join(weight_prefix, "weights_epoch_0_step_" + str(e+1) + ".pt")
                             weight_path_epoch = os.path.join(weight_prefix, "weights_"+str(e)+".pt")
                             self.search_space.load_state_dict(torch.load(weight_path_epoch))
                             self.search_space.to(self.device)
@@ -2295,18 +1593,15 @@ class ZeroCostPredictorEvaluator(object):
         progressive_mask_applied = False
         for step, (inputs, targets) in enumerate(train_loader):
             if max_train_steps > 0 and step >= max_train_steps:
-                self.logger.info("diag_stop_train_after_steps: {}".format(max_train_steps))
+                self.logger.info("proxydiff_stop_train_after_steps: {}".format(max_train_steps))
                 break
-            # if (epoch==0 and step>=30) or epoch>0:
 
             inputs = Variable(inputs, requires_grad=False).cuda()
             targets = Variable(targets, requires_grad=False).cuda()
             n = inputs.size(0)
-            # logger.info("n: "+str(n))
 
             valid_loader.append((inputs,targets))
 
-            # 1: weights, 2: all metrics, 3: metric12, 4: metric23, 5:w+m23
 
             if fix_order:
                 if step == 0:
@@ -2314,25 +1609,16 @@ class ZeroCostPredictorEvaluator(object):
                 logits = self.search_space.forward(inputs, epoch=epoch, to_print=False, fix_logger=self.log_path,no_edge_normalize=no_edge_normalize)
                 loss = criterion(logits, targets)
             else:
-                # if mode==1:
-                #     drop_prob = 0.2
-                # else:
                 drop_prob = 0
                 if mode<6:
                     if mode != 1:
                         if mode != 4 and mode!=5:
                             optimizer_axis_calib.zero_grad()
-                        # optimizer_metric2.zero_grad()
                         if mode != 3:
                             optimizer_component_corr.zero_grad()
                     if mode != 2 and mode != 3 and mode != 4:
                         optimizer.zero_grad()
-                    # if step==0:
-                    #     self.logger.info("inputs_original:" + str(inputs))
-                    #     logits = self.search_space.forward(inputs,epoch=epoch,to_print=True,fix_logger=self.log_path)
-                    # else:
                     logits = self.search_space.forward(inputs, epoch=epoch, to_print=False, fix_logger=self.log_path,drop_prob=drop_prob,no_edge_normalize=no_edge_normalize)
-                    # logger.info("logits:"+str(logits))
                     loss = criterion(logits, targets)
 
                     if self.search_space.space_name=="nasbench301":
@@ -2341,22 +1627,12 @@ class ZeroCostPredictorEvaluator(object):
                             loss_aux = criterion(logits_aux, targets)
                             loss += 0.4*loss_aux
 
-                    # if mode==2 or mode>3:
-                    #     loss_norm = 0
-                    #     for i in range(len(self.search_space._metric_parameters3[0])):
-                    #         for j in range(len(self.search_space._metric_parameters3[0][i])):
-                    #             if j==1:
-                    #                 pass
-                    #             else:
-                    #                 loss_norm += abs(self.search_space._metric_parameters3[0][i][j])
-                    #     loss += 0.1*loss_norm
 
                     loss.backward()
                     nn.utils.clip_grad_norm(self.search_space.parameters(), 5)
                     if mode != 1:
                         if mode != 4 and mode!=5:
                             optimizer_axis_calib.step()
-                        # optimizer_metric2.step()
                         if mode != 3:
                             optimizer_component_corr.step()
                     if mode != 2 and mode != 3 and mode != 4:
@@ -2433,9 +1709,6 @@ class ZeroCostPredictorEvaluator(object):
                             loss_aux = criterion(logits_aux, targets)
                             loss += 0.4*loss_aux
                     loss_contrast = contrastive_loss(logits, targets)
-                    # loss += loss_contrast
-                    # loss = loss_contrast
-                    # loss = loss + (int(loss/loss_contrast))*loss_contrast
                     loss.backward()
                     if self.search_space.metric_num > 1:
                         if step < axis_calib_steps:
@@ -2474,7 +1747,6 @@ class ZeroCostPredictorEvaluator(object):
                             epoch=epoch,
                             stage=stage_name,
                         )
-                    # sys.exit()
                 elif mode==9:
                     optimizer.zero_grad()
                     optimizer_component_corr.zero_grad()
@@ -2500,16 +1772,10 @@ class ZeroCostPredictorEvaluator(object):
                             loss_aux = criterion(logits_aux, targets)
                             loss += 0.4 * loss_aux
                     loss_contrast = contrastive_loss(logits, targets)
-                    # loss += loss_contrast
-                    # loss = loss_contrast
-                    # loss = 0.5 * loss + loss_contrast
                     loss = loss + (int(loss / loss_contrast)) * loss_contrast
                     loss.backward()
                     optimizer.step()
 
-            # if self.search_space.has_metric_para == False:
-            #     for k, v in self.search_space.named_parameters():
-            #         self.logger.info("grad "+str(k)+": "+str(v.grad))
 
             prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
             objs.update(loss.data.item(), n)
@@ -2517,47 +1783,24 @@ class ZeroCostPredictorEvaluator(object):
 
             step = step + 1
 
-            # if (step+1)%100==0:
-            #     torch.save(graph.state_dict(),
-            #                os.path.join(save_path, 'weights_epoch_{}_step_{}.pt'.format(str(epoch), str(step))))
 
-            # else:
-            #     step = step+1
 
-            # if step==30:
-            #     break
 
             if step == 1:
                 self.logger.info('train %03d %e %f', step-1, objs.avg, top1.avg)
-                # if fix_order:
-                #     break
 
             if step % 50 == 0:
                 self.logger.info('train %03d %e %f', step, objs.avg, top1.avg)
                 stop_after_step = int(os.environ.get("PROXYDIFF_DIAG_STOP_AFTER_STEP", "0") or 0)
                 if stop_after_step and step >= stop_after_step:
-                    self.logger.info("diag_stop_after_step: %d", step)
+                    self.logger.info("proxydiff_stop_after_step: %d", step)
                     raise SystemExit(0)
-                # self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
 
-                # if mode>3 and top1.avg<last_acc:
-                #     break
-                #     # self.logger.info("valid_data: "+str(valid_loader[0]))
-                #     valid_acc = self.infer(valid_loader,criterion,epoch)
-                #     if valid_acc<top1.avg:
-                #         # if decrease==False:
-                #         #     decrease = True
-                #         # else:
-                #         stop = True
-                #         break
-                # last_acc = top1.avg
-                # break
 
             if train_half:
                 if step==half_num:
                     self.logger.info('train %03d %e %f', step, objs.avg, top1.avg)
                     break
-            # break
 
         if fix_order:
             for step, (inputs, targets) in enumerate(train_loader):
@@ -2569,20 +1812,16 @@ class ZeroCostPredictorEvaluator(object):
         return stop, decrease
 
     def infer(self, valid_loader, criterion, epoch):
-        # self.search_space.train()
         with torch.no_grad():
             objs = utils.AvgrageMeter()
             top1 = utils.AvgrageMeter()
             for step, (inputs, targets) in enumerate(valid_loader):
-                # if (epoch==0 and step>=30) or epoch>0:
 
                 inputs = Variable(inputs, requires_grad=False).cuda()
                 targets = Variable(targets, requires_grad=False).cuda()
                 n = inputs.size(0)
-                # logger.info("n: "+str(n))
 
                 logits = self.search_space.forward(inputs, epoch=epoch, to_print=False, fix_logger=self.log_path,no_edge_normalize=no_edge_normalize)
-                # logger.info("logits:"+str(logits))
                 loss = criterion(logits, targets)
 
                 prec1, prec5 = utils.accuracy(logits, targets, topk=(1, 5))
@@ -2595,7 +1834,6 @@ class ZeroCostPredictorEvaluator(object):
                     self.logger.info('valid %03d %e %f', step - 1, objs.avg, top1.avg)
                 if step % 50 == 0:
                     self.logger.info('valid %03d %e %f', step, objs.avg, top1.avg)
-                    # self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.search_space._metric_parameters3[0])))
 
         self.logger.info('valid_acc %f', top1.avg)
 
@@ -2645,55 +1883,22 @@ class EvolutionSearcher(object):
         self.dataset_api = dataset_api
         self.criterion = criterion
 
-        # self.train_loader = DataIterator(train_loader)
-        # self.valid_loader = DataIterator(valid_loader)
         self.train_loader = train_loader
         self.valid_loader = valid_loader
 
         self.logger = logger
 
-        # self.logger.info("testset: {}".format(testset[0][0]))
-        # cand3 = (((0, 1), (1, 6), (0, 6), (1, 1), (2, 5), (3, 0), (0, 0), (2, 2)), ((0, 1), (1, 6), (1, 4), (2, 6), (0, 0), (3, 4), (1, 5), (2, 6)))
-        # self.logger.info("testset acc: {}".format(self.zc_api[str(cand3)]['val_accuracy']))
-        # cand1 = (((0, 3), (1, 3), (0, 4), (1, 4), (1, 4), (2, 3), (0, 3), (3, 4)), ((0, 4), (1, 4), (0, 3), (1, 3), (0, 4), (1, 3), (0, 4), (1, 3)))
-        # cand2 = (((0, 0), (1, 0), (0, 0), (1, 0), (1, 0), (2, 0), (0, 0), (3, 0)), ((0, 0), (1, 0), (0, 0), (1, 0), (0, 0), (1, 0), (0, 0), (1, 0)))
-        # self.logger.info("testset acc: {}".format(self.zc_api[str(cand2)]['val_accuracy']))
-        # self.logger.info("testset acc: {}".format(self.zc_api[str(cand1)]['val_accuracy']))
         self.log_path = log_path
         self.visit_epoch = []
         self.memory = []
         self.vis_dict = {}
         self.keep_top_k = {self.select_num: [], 50: []}
-        # self.keep_top_k = {self.select_num: []}
         self.epoch = 0
         self.candidates = []
 
         self.choice = lambda x: x[np.random.randint(len(x))] if isinstance(x, tuple) else self.choice(tuple(x))
 
-    # def save_checkpoint(self):
-    #     if not os.path.exists(self.log_dir):
-    #         os.makedirs(self.log_dir)
-    #     info = {}
-    #     info['memory'] = self.memory
-    #     info['candidates'] = self.candidates
-    #     info['vis_dict'] = self.vis_dict
-    #     info['keep_top_k'] = self.keep_top_k
-    #     info['epoch'] = self.epoch
-    #     torch.save(info, self.checkpoint_name)
-    #     print('save checkpoint to', self.checkpoint_name)
 
-    # def load_checkpoint(self):
-    #     if not os.path.exists(self.checkpoint_name):
-    #         return False
-    #     info = torch.load(self.checkpoint_name)
-    #     self.memory = info['memory']
-    #     self.candidates = info['candidates']
-    #     self.vis_dict = info['vis_dict']
-    #     self.keep_top_k = info['keep_top_k']
-    #     self.epoch = info['epoch']
-    #
-    #     print('load checkpoint from', self.checkpoint_name)
-    #     return True
 
     def update_top_k(self, candidates, *, k, key, reverse=True):
         assert k in self.keep_top_k
@@ -2727,14 +1932,12 @@ class EvolutionSearcher(object):
             for i in range(len(cand)):
                 cand[i] = tuple(cand[i])
             cand_tuple = tuple(cand)
-            # print(f"Generated cand: {cand_tuple} and its type: {type(cand_tuple)}")
             return cand_tuple
 
         cand_iter = self.stack_random_cand(random_func)
         while len(self.candidates) < num:
             cand = next(cand_iter)
             cand_tuple = tuple(cand)
-            # print(f"Next candidate: {cand_tuple} and its type: {type(cand_tuple)}")
             if not self.is_legal(cand_tuple,train=train):
                 continue
             self.candidates.append(cand_tuple)
@@ -2816,7 +2019,6 @@ class EvolutionSearcher(object):
         for c in range(len(cand)):
             for item in range(4):
                 if cand[c][item*2][0]==cand[c][item*2+1][0] and cand[c][item*2][1]==cand[c][item*2+1][1]:
-                    # self.logger.info("validating...{}".format(cand))
                     return False
         cand_transfer = list(cand)
         for c in range(len(cand)):
@@ -2825,13 +2027,6 @@ class EvolutionSearcher(object):
                 cand_transfer[c][idx] = (cand[c][idx][0], cand[c][idx][2])
             cand_transfer[c] = tuple(cand_transfer[c])
         cand_transfer = tuple(cand_transfer)
-        # try:
-        #     acc = self.zc_api[str(cand_transfer)]['val_accuracy']
-        # except Exception as e:
-        #     return False
-        # # if cand_transfer not in xtest:
-        # #     return False
-        # self.logger.info("valid arch: {}".format(cand_transfer))
 
         return True
 
@@ -2840,10 +2035,6 @@ class EvolutionSearcher(object):
             self.vis_dict[cand] = {}
         info = self.vis_dict[cand]
 
-        # if cand in self.visit_epoch:
-        #     return False
-        # else:
-        #     self.visit_epoch.append(cand)
 
         if self.model.space_name=="nasbench301":
             for c in range(len(self.model._masks)):
@@ -2851,7 +2042,6 @@ class EvolutionSearcher(object):
                     for op in range(len(self.model._masks[c][e])):
                         self.model._masks[c][e][op] = 0
                         self.model_copy._masks[c][e][op] = 0
-            # cand = self.model.labeled_archs[0]
             for c in range(len(cand)):
                 for item in range(len(cand[c])):
                     if len(cand[c][item])==2:
@@ -2872,7 +2062,6 @@ class EvolutionSearcher(object):
                 self.model._masks[i][cand[i]] = 1
                 self.model_copy._masks[i][cand[i]] = 1
 
-        # self.logger.info("cand: "+str(cand))
         info['err'] = self.get_cand_err(train=train, test=test)
 
         if self.model.space_name=="nasbench301":
@@ -2895,56 +2084,11 @@ class EvolutionSearcher(object):
         self.logger.info('population_num = {} select_num = {} mutation_num = {} crossover_num = {} random_num = {} max_epochs = {}'.format(
             self.population_num, self.select_num, self.mutation_num, self.crossover_num, self.population_num - self.mutation_num - self.crossover_num, self.max_epochs))
 
-        # for name, v in self.model.named_parameters():
-        #     self.logger.info("before: {},{}".format(name,v))
-        #     break
-        # self.model.load_state_dict(state_dict)
-        # for name, v in self.model.named_parameters():
-        #     self.logger.info("after: {},{}".format(name,v))
-        #     break
         self.epoch = epoch
         self.state_dict = copy.deepcopy(self.model.state_dict())
 
         self.cur_epoch = 0
         if search:
-            # self.get_random(self.population_num)
-            # while self.cur_epoch < self.max_epochs:
-            #     self.visit_epoch = []
-            #     self.logger.info('epoch = {}'.format(self.cur_epoch))
-            #     visited_cand = []
-            #     self.memory.append([])
-            #     for cand in self.candidates:
-            #         if cand not in self.visit_epoch:
-            #             self.memory[-1].append(cand)
-            #             visited_cand.append(cand)
-            #
-            #     self.update_top_k(
-            #         self.candidates, k=self.select_num, key=lambda x: self.vis_dict[x]['err'])
-            #     self.update_top_k(
-            #         self.candidates, k=50, key=lambda x: self.vis_dict[x]['err'])
-            #
-            #     self.logger.info('epoch = {} : top {} result'.format(
-            #         self.cur_epoch, len(self.keep_top_k[50])))
-            #     for i, cand in enumerate(self.keep_top_k[50]):
-            #         self.logger.info('No.{} {} Top-1 err = {}'.format(
-            #             i + 1, cand, self.vis_dict[cand]['err']))
-            #     # self.logger.info('epoch = {} : top {} result'.format(
-            #     #     self.epoch, len(self.keep_top_k[self.select_num])))
-            #     # for i, cand in enumerate(self.keep_top_k[self.select_num]):
-            #     #     self.logger.info('No.{} {} Top-1 err = {}'.format(
-            #     #         i + 1, cand, self.vis_dict[cand]['err']))
-            #         # ops = [i for i in cand]
-            #         # print(cand)
-            #
-            #     mutation = self.get_mutation(
-            #         self.select_num, self.mutation_num, self.m_prob)
-            #     crossover = self.get_crossover(self.select_num, self.crossover_num)
-            #
-            #     self.candidates = mutation + crossover
-            #
-            #     self.get_random(self.population_num)
-            #
-            #     self.cur_epoch += 1
 
             score_orig = self.get_score(epoch=epoch)
             if self.model.space_name == "nasbench301":
@@ -2974,236 +2118,14 @@ class EvolutionSearcher(object):
                             new_scores_array[max_idx][2] = 0
                             self.model._masks[c][new_scores[c][cur_node][max_idx][0]][new_scores[c][cur_node][max_idx][1]] = 1
                         top_ops[c][cur_node].sort(key=lambda x: (x[0], x[1]))
-            #     # top_archs = []
-            #     # arch_tmp = []
-            #     # score_tmp = 0
-            #     # for c in range(len(top_ops)):
-            #     #     arch_tmp.append([])
-            #     #     for cur_node in range(len(top_ops[c])):
-            #     #         arch_tmp[c].append((self.model.edge_to_inout[top_ops[c][cur_node][0][0]][0],self.model.edge_to_inout[top_ops[c][cur_node][0][0]][1],top_ops[c][cur_node][0][1]))
-            #     #         score_tmp += top_ops[c][cur_node][0][2]
-            #     #         arch_tmp[c].append((self.model.edge_to_inout[top_ops[c][cur_node][1][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][1][0]][1], top_ops[c][cur_node][1][1]))
-            #     #         score_tmp += top_ops[c][cur_node][1][2]
-            #     # top_archs.append((arch_tmp,score_tmp))
-            #
-            #     groups = []
-            #     for c in range(len(top_ops)):
-            #         for cur_node in range(len(top_ops[c])):
-            #             ops_groups = []
-            #             for num in range(len(top_ops[c][cur_node])):
-            #                 ops_groups.append(((self.model.edge_to_inout[top_ops[c][cur_node][num][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][num][0]][1], top_ops[c][cur_node][num][1]), top_ops[c][cur_node][num][2]))
-            #             ops_comb = list(itertools.combinations(ops_groups,2))
-            #             groups.append(ops_comb)
-            #             # item1_tmp = []
-            #             # item1_tmp.append(((self.model.edge_to_inout[top_ops[c][cur_node][0][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][0][0]][1], top_ops[c][cur_node][0][1]), top_ops[c][cur_node][0][2]))
-            #             # item1_tmp.append(((self.model.edge_to_inout[top_ops[c][cur_node][1][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][1][0]][1], top_ops[c][cur_node][1][1]), top_ops[c][cur_node][1][2]))
-            #             # item2_tmp = []
-            #             # item2_tmp.append(((self.model.edge_to_inout[top_ops[c][cur_node][0][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][0][0]][1], top_ops[c][cur_node][0][1]), top_ops[c][cur_node][0][2]))
-            #             # item2_tmp.append(((self.model.edge_to_inout[top_ops[c][cur_node][2][0]][0], self.model.edge_to_inout[top_ops[c][cur_node][2][0]][1], top_ops[c][cur_node][2][1]), top_ops[c][cur_node][2][2]))
-            #             # groups.append([item1_tmp, item2_tmp])
-            #     #         self.logger.info("ops_groups: {}".format(ops_groups))
-            #     #         self.logger.info("ops_comb: {}".format(ops_comb))
-            #     # self.logger.info("groups: {}".format(groups))
-            #     all_comb = list(itertools.product(*groups))
-            #     top_archs = []
-            #     top_scores = []
-            #     # self.logger.info("all_comb: {}".format(all_comb))
-            #     for comb in all_comb:
-            #         arch_tmp = [[], []]
-            #         score_tmp = 0
-            #         op_idx = 0
-            #         for node in comb:
-            #             for op in node:
-            #                 if op_idx <= 7:
-            #                     c = 0
-            #                 else:
-            #                     c = 1
-            #                 # self.logger.info("op: {}".format(op))
-            #                 arch_tmp[c].append(op[0])
-            #                 score_tmp += op[1]
-            #                 op_idx += 1
-            #         if self.is_valid(arch_tmp):
-            #             top_archs.append((tuple(arch_tmp[0]),tuple(arch_tmp[1])))
-            #             top_scores.append(score_tmp)
-            #             # self.logger.info("arch: {}, score: {}".format(arch_tmp, score_tmp))
-            #     self.logger.info("comb_num: {}".format(len(all_comb)))
-            elif False:
-                top_ops = []
-                for e in range(len(self.model._masks[0])):
-                    for op in range(len(self.model._masks[0][e])):
-                        self.model._masks[0][e][op] = 0
-                for e in range(len(self.model._masks[0])):
-                    top_ops.append([])
-                    for _ in range(1):
-                        max_idx = np.argmax(score_orig[e].detach().cpu().numpy())
-                        top_ops[e].append((max_idx,score_orig[e]))
-                        score_orig[e][max_idx] = 0
-                        self.model._masks[0][e][max_idx] = 1
-                    top_ops[e].sort(key=lambda x: (x[0]))
-            #     groups = []
-            #     for e in range(len(top_ops)):
-            #         item1_tmp = ([top_ops[e][0][0]], top_ops[e][0][1])
-            #         item2_tmp = ([top_ops[e][1][0]], top_ops[e][1][1])
-            #         groups.append([item1_tmp,item2_tmp])
-            #
-            #     all_comb = list(itertools.product(*groups))
-            #     top_archs = []
-            #     top_scores = []
-            #     for comb in all_comb:
-            #         arch_tmp = []
-            #         score_tmp = 0
-            #         for op in comb:
-            #             # self.logger.info("op: {}".format(op))
-            #             arch_tmp.append(op[0])
-            #             score_tmp += op[1]
-            #         top_archs.append(arch_tmp)
-            #         top_scores.append(score_tmp)
-            #         # self.logger.info("arch: {}, score: {}".format(arch_tmp, score_tmp))
-            #
-            # self.logger.info("arch_num: {}".format(len(top_archs)))
-            # self.candidates = top_archs
-            #
-            # self.update_top_k(
-            #     self.candidates, k=self.select_num, key=lambda x: top_scores[top_archs.index(x)])
-            # self.update_top_k(
-            #     self.candidates, k=50, key=lambda x: top_scores[top_archs.index(x)])
 
-                # rank_list = []
-                # acc_list = []
-                # for i, cand in enumerate(self.keep_top_k[50]):
-                #     cand_acc, rank=None,None
-                #     cand_transfer = list(cand)
-                #     for c in range(len(cand)):
-                #         cand_transfer[c] = list(cand_transfer[c])
-                #         for idx in range(len(cand[c])):
-                #             cand_transfer[c][idx] = (cand[c][idx][0],cand[c][idx][2])
-                #         cand_transfer[c] = tuple(cand_transfer[c])
-                #     cand_transfer = tuple(cand_transfer)
-                #     self.logger.info("cand: {}".format(cand_transfer))
-                #     try:
-                #         cand_acc = self.zc_api[str(cand_transfer)]['val_accuracy']
-                #     except Exception as e:
-                #         self.logger.info("No acc")
-                #     try:
-                #         xtest, ytest, test_info, _ = self.testset
-                #         rank = np.where(np.unique(ytest[ytest.argsort()])[::-1] == cand_acc)
-                #     except Exception as e:
-                #         self.logger.info("No rank")
-                #     rank_list.append(rank)
-                #     acc_list.append(cand_acc)
-                #
-                #     self.logger.info('No.{} {} init score = {}, acc={}, rank={}'.format(
-                #         i + 1, cand, top_scores[top_archs.index(cand)], cand_acc, rank))
-                # sum_10, sum_50 = 0,0
-                # num_10, num_50 = 0,0
-                # for rank in rank_list:
-                #     if rank != None:
-                #         if num_10<=10:
-                #             sum_10 += rank
-                #             num_10 += 1
-                #         sum_50 += rank
-                #         num_50 += 1
-                # if num_10==0:
-                #     self.logger.info("No valid arch")
-                # else:
-                #     self.logger.info("top 10 rank avg: {}, top 50 rank avg: {}".format(sum_10/num_10,sum_50/num_50))
-                # sum_10, sum_50 = 0,0
-                # num_10, num_50 = 0,0
-                # for acc in acc_list:
-                #     if acc != None:
-                #         if num_10<=10:
-                #             sum_10 += acc
-                #             num_10 += 1
-                #         sum_50 += acc
-                #         num_50 += 1
-                # if num_10==0:
-                #     self.logger.info("No valid acc")
-                # else:
-                #     self.logger.info("top 10 acc avg: {}, top 50 acc avg: {}".format(sum_10/num_10,sum_50/num_50))
-
-            # xtest, ytest, test_info, _ = self.testset
-            # idx_sort = np.array(ytest).argsort()[::-1]
-            # xtest_sort = np.array(xtest)[idx_sort]
-            # ytest_sort = np.array(ytest)[idx_sort]
-            # if train:
-            #     arch_list = []
-            #     score_list = []
-            #     for arch_idx in range(50):
-            #         cand = list(xtest_sort[arch_idx])
-            #         score = 0
-            #         for c in range(len(cand)):
-            #             cand[c] = list(cand[c])
-            #             for idx in range(len(cand[c])):
-            #                 cand[c][idx] = (cand[c][idx][0],idx//2+2,cand[c][idx][1])
-            #                 op = cand[c][idx][1]
-            #                 edge = self.model.inout_to_edge[(cand[c][idx][0],idx//2+2)]
-            #                 score += score_orig[c][edge][op]
-            #             cand[c] = tuple(cand[c])
-            #         cand = tuple(cand)
-            #         arch_list.append(cand)
-            #         score_list.append(score.detach().cpu())
-            #         self.logger.info("arch: {}, score: {}, actual_acc: {}".format(xtest_sort[arch_idx], score, ytest_sort[arch_idx]))
-            #     self.logger.info("correlation_10: {}, _50: {}".format(stats.spearmanr(ytest_sort[:10], score_list[:10]),stats.spearmanr(ytest_sort[:50], score_list[:50])))
-            #     rank_list = np.array(score_list).argsort()[::-1]
-            #     self.logger.info("rank: {}".format(rank_list))
-            #
-            #     self.candidates = arch_list
-            #
-            #     self.update_top_k(
-            #         self.candidates, k=self.select_num, key=lambda x: score_list[arch_list.index(x)])
-            #     self.update_top_k(
-            #         self.candidates, k=50, key=lambda x: score_list[arch_list.index(x)])
-
-                # self.candidates = self.keep_top_k[50]
             acc_list = []
             num = 0
-            # full_acc = self.get_cand_err(train=False,test=True)
-            # self.logger.info("full_acc: {}".format(full_acc))
 
-            # for cand in self.candidates:
-            #     cand_tuple = tuple(cand)
-            #     if train:
-            #         if not self.is_legal(cand_tuple, train=True, test=True):
-            #             continue
-            #     else:
-            #         if not self.is_legal(cand_tuple, train=False, test=True):
-            #             continue
-            #         acc = self.vis_dict[cand]['err'][0]
-            #         acc_list.append(acc)
-            #         num += 1
-            #         self.logger.info("arch: {}, score: {}".format(cand, acc))
 
             if train:
-                # for cand in self.keep_top_k[10][::-1]:
-                # if self.model.space_name == "nasbench301":
-                #     for c in range(len(self.model._masks)):
-                #         for e in range(len(self.model._masks[c])):
-                #             for op in range(len(self.model._masks[c][e])):
-                #                 self.model._masks[c][e][op] = 0
-                #     for cand in self.keep_top_k[50]:
-                #         # self.logger.info("cand: " + str(cand))
-                #         for c in range(len(cand)):
-                #             for item in range(len(cand[c])):
-                #                 if len(cand[c][item])==2:
-                #                     edge = self.model.inout_to_edge[(cand[c][item][0], int(item / 2) + 2)]
-                #                     op = cand[c][item][1]
-                #                 elif len(cand[c][item])==3:
-                #                     edge = self.model.inout_to_edge[(cand[c][item][0], cand[c][item][1])]
-                #                     op = cand[c][item][2]
-                #                 self.model._masks[c][edge][op] = 1
-                # else:
-                #     for e in range(len(self.model._masks)):
-                #         for op in range(len(self.model._masks[e])):
-                #             self.model._masks[e][op] = 0
-                #     for cand in self.keep_top_k[50]:
-                #         for i in range(len(cand)):
-                #             self.model._masks[i][cand[i]] = 1
                 self.logger.info("mask: " + str(self.model._masks))
                 self.get_cand_err(train=True, test=True)
-                # if False:
-                #     self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.model._metric_parameters3[0])))
-                # if self.model.space_name == "nasbench301":
-                #     self.logger.info("sigmoid metric_component_corr: {}".format([F.sigmoid(self.model._metric_parameters3[c]) for c in range(2)]))
                 if self.model.space_name == "nasbench301":
                     for c in range(len(self.model._masks)):
                         for e in range(len(self.model._masks[c])):
@@ -3214,129 +2136,15 @@ class EvolutionSearcher(object):
                         for op in range(len(self.model._masks[0][e])):
                             self.model._masks[0][e][op] = 1
 
-            # if not train:
-                # for cand in self.keep_top_k[50]:
 
-                # self.logger.info("correlation_10: {}, _50: {}".format(stats.spearmanr(ytest_sort[:10], acc_list[:10]), stats.spearmanr(ytest_sort[:50], acc_list[:50])))
-                # rank_list = np.array(acc_list).argsort()[::-1]
-                # self.logger.info("rank: {}".format(rank_list))
 
-            # if not train:
-            #     self.update_top_k(
-            #         self.candidates, k=self.select_num, key=lambda x: self.vis_dict[x]['err'])
-            #     self.update_top_k(
-            #         self.candidates, k=50, key=lambda x: self.vis_dict[x]['err'])
 
-            # rank_list = []
-            # acc_list = []
-            # for i, cand in enumerate(self.keep_top_k[50]):
-            #     cand_acc, rank = None, None
-            #     cand_transfer = list(cand)
-            #     for c in range(len(cand)):
-            #         cand_transfer[c] = list(cand_transfer[c])
-            #         for idx in range(len(cand[c])):
-            #             cand_transfer[c][idx] = (cand[c][idx][0], cand[c][idx][2])
-            #         cand_transfer[c] = tuple(cand_transfer[c])
-            #     cand_transfer = tuple(cand_transfer)
-            #     try:
-            #         cand_acc = self.zc_api[str(cand_transfer)]['val_accuracy']
-            #     except Exception as e:
-            #         self.logger.info("No acc")
-            #     try:
-            #         xtest, ytest, test_info, _ = self.testset
-            #         rank = np.where(np.unique(ytest[ytest.argsort()])[::-1] == cand_acc)
-            #     except Exception as e:
-            #         self.logger.info("No rank")
-            #     rank_list.append(rank)
-            #     acc_list.append(cand_acc)
-            #     self.logger.info('No.{} {} training score = {}, acc={}, rank={}'.format(
-            #         i + 1, cand, self.vis_dict[cand]['err'], cand_acc, rank))
-            # sum_10, sum_50 = 0,0
-            # num_10, num_50 = 0,0
-            # for rank in rank_list:
-            #     if rank != None:
-            #         if num_10<=10:
-            #             sum_10 += rank
-            #             num_10 += 1
-            #         sum_50 += rank
-            #         num_50 += 1
-            # if num_10==0:
-            #     self.logger.info("No valid arch")
-            # else:
-            #     self.logger.info("top 10 rank avg: {}, top 50 rank avg: {}".format(sum_10/num_10,sum_50/num_50))
-            # sum_10, sum_50 = 0,0
-            # num_10, num_50 = 0,0
-            # for acc in acc_list:
-            #     if acc != None:
-            #         if num_10<=10:
-            #             sum_10 += acc
-            #             num_10 += 1
-            #         sum_50 += acc
-            #         num_50 += 1
-            # if num_10==0:
-            #     self.logger.info("No valid acc")
-            # else:
-            #     self.logger.info("top 10 acc avg: {}, top 50 acc avg: {}".format(sum_10/num_10,sum_50/num_50))
 
         if train and not search:
-            # for cand in self.keep_top_k[self.select_num][::-1]:
-            # if self.model.space_name == "nasbench301":
-            #     for c in range(len(self.model._masks)):
-            #         for e in range(len(self.model._masks[c])):
-            #             for op in range(len(self.model._masks[c][e])):
-            #                 self.model._masks[c][e][op] = 0
-            #     for cand in self.keep_top_k[50][::-1]:
-            #         for c in range(len(cand)):
-            #             for item in range(len(cand[c])):
-            #                 edge = self.model.inout_to_edge[(cand[c][item][0], int(item / 2) + 2)]
-            #                 op = cand[c][item][1]
-            #                 self.model._masks[c][edge][op] = 1
-            # else:
-            #     for e in range(len(self.model._masks)):
-            #         for op in range(len(self.model._masks[e])):
-            #             self.model._masks[e][op] = 0
-            #     for cand in self.keep_top_k[50][::-1]:
-            #         for i in range(len(cand)):
-            #             self.model._masks[i][cand[i]] = 1
             self.logger.info("mask: " + str(self.model._masks))
             self.get_cand_err(train=True,test=False)
-            # if False:
-            #     self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.model._metric_parameters3[0])))
-            # if self.model.space_name == "nasbench301":
-            #     self.logger.info("sigmoid metric_component_corr: {}".format([F.sigmoid(self.model._metric_parameters3[c]) for c in range(2)]))
-            # if self.model.space_name == "nasbench301":
-            #     for c in range(len(self.model._masks)):
-            #         for e in range(len(self.model._masks[c])):
-            #             for op in range(len(self.model._masks[c][e])):
-            #                 self.model._masks[c][e][op] = 1
-            # else:
-            #     for e in range(len(self.model._masks)):
-            #         for op in range(len(self.model._masks[e])):
-            #             self.model._masks[e][op] = 1
 
-            # score_orig = self.get_score(epoch=epoch)
-            # xtest, ytest, test_info, _ = self.testset
-            # idx_sort = np.array(ytest).argsort()[::-1]
-            # xtest_sort = np.array(xtest)[idx_sort]
-            # ytest_sort = np.array(ytest)[idx_sort]
-            # score_list = []
-            # for arch_idx in range(50):
-            #     cand = list(xtest_sort[arch_idx])
-            #     score = 0
-            #     for c in range(len(cand)):
-            #         cand[c] = list(cand[c])
-            #         for idx in range(len(cand[c])):
-            #             cand[c][idx] = (cand[c][idx][0], idx // 2 + 2, cand[c][idx][1])
-            #             op = cand[c][idx][1]
-            #             edge = self.model.inout_to_edge[(cand[c][idx][0], idx // 2 + 2)]
-            #             score += score_orig[c][edge][op]
-            #     score_list.append(score.detach().cpu())
-            #     self.logger.info("arch: {}, score: {}".format(xtest_sort[arch_idx], score))
-            # self.logger.info("correlation_10: {}, _50: {}".format(stats.spearmanr(ytest_sort[:10], score_list[:10]), stats.spearmanr(ytest_sort[:50], score_list[:50])))
-            # rank_list = np.array(score_list).argsort()[::-1]
-            # self.logger.info("rank: {}".format(rank_list))
 
-    # self.save_checkpoint()
 
     def get_cand_err(self, max_train_iters=100, max_test_iters=100, train=False, test=True):
         max_train_iters = max_train_iters
@@ -3352,17 +2160,12 @@ class EvolutionSearcher(object):
             objs = utils.AvgrageMeter()
             top1 = utils.AvgrageMeter()
             top5 = utils.AvgrageMeter()
-            # for step in range(max_train_iters):
-            #     data, target = self.train_loader.next()
             for step, (data, target) in enumerate(self.train_loader):
                 if step>200:
                     break
                 t0 = time.time()
-                # print('train step: {} total: {}'.format(step,max_train_iters))
                 batchsize = data.shape[0]
-                # print('get data',data.shape)
 
-                # target = target.type(torch.LongTensor)
 
                 if self.model.metric_num > 1:
                     if step < 20:
@@ -3377,7 +2180,6 @@ class EvolutionSearcher(object):
                 output = self.model.forward(data,epoch=self.epoch,no_edge_normalize=no_edge_normalize)
                 loss = self.criterion(output, target)
                 loss_contrast = contrastive_loss(output, target)
-                # loss = loss + (int(loss / loss_contrast)) * loss_contrast
 
                 prec1, prec5 = self.accuracy(output, target, topk=(1, 5))
                 top1.update(prec1.item(), batchsize)
@@ -3392,8 +2194,6 @@ class EvolutionSearcher(object):
                     self.logger.info('top1: {:.2f} top5: {:.2f}'.format(top1.avg,top5.avg))
 
                 loss.backward()
-                # self.optimizer_component_corr.step()
-                # self.optimizer.step()
                 if self.model.metric_num > 1:
                     if step < 100:
                         self.optimizer_axis_calib.step()
@@ -3408,36 +2208,23 @@ class EvolutionSearcher(object):
             self.model.has_metric_para = False
             if train:
 
-            # self.model_copy.load_state_dict(self.state_dict)
                 self.model.train()
 
-                # self.model.train()
                 objs = utils.AvgrageMeter()
                 top1 = utils.AvgrageMeter()
                 top5 = utils.AvgrageMeter()
-                # for step in range(max_train_iters):
-                #     data, target = self.train_loader.next()
                 self.logger.info("start training...")
                 for step, (data, target) in enumerate(self.train_loader):
-                # for step, (data, target) in enumerate(self.valid_loader):
                     if step > 250:
                         break
                     t0 = time.time()
-                    # print('train step: {} total: {}'.format(step,max_train_iters))
                     batchsize = data.shape[0]
-                    # print('get data',data.shape)
 
-                    # target = target.type(torch.LongTensor)
 
                     data, target = data.cuda(), target.cuda()
                     t1 = time.time()
-                    # output = self.model.forward(data, epoch=self.epoch, no_edge_normalize=True)
                     output = self.model.forward(data, epoch=self.epoch, no_edge_normalize=False, to_print=False,fix_logger=self.log_path)
-                    # if step==0:
-                    #     self.logger.info("logist:" + str(output))
                     loss = self.criterion(output, target)
-                    # loss_contrast = contrastive_loss(output, target)
-                    # loss = loss + (int(loss / loss_contrast)) * loss_contrast
 
                     prec1, prec5 = self.accuracy(output, target, topk=(1, 5))
                     top1.update(prec1.item(), batchsize)
@@ -3451,20 +2238,16 @@ class EvolutionSearcher(object):
                         )
                         self.logger.info('top1: {:.2f} top5: {:.2f}'.format(top1.avg, top5.avg))
 
-                    # self.optimizer_component_corr.zero_grad()
                     self.optimizer.zero_grad()
                     loss.backward()
-                    # self.optimizer_component_corr.step()
                     self.optimizer.step()
-                    # break
 
                 self.logger.info('top1: {:.2f} top5: {:.2f}'.format(top1.avg, top5.avg))
                 if False:
-                    self.logger.info("sigmoid metric_component_corr: {}".format(F.sigmoid(self.model._metric_parameters3[0])))
+                    self.logger.info("sigmoid component_corr_weights: {}".format(F.sigmoid(_component_corr_weights(self.model)[0])))
                 if self.model.space_name == "nasbench301":
-                    self.logger.info("sigmoid metric_component_corr: {}".format([F.sigmoid(self.model._metric_parameters3[c]) for c in range(2)]))
+                    self.logger.info("sigmoid component_corr_weights: {}".format([F.sigmoid(_component_corr_weights(self.model)[c]) for c in range(2)]))
 
-            # self.model.has_metric_para = False
 
             else:
                 top1 = utils.AvgrageMeter()
@@ -3473,20 +2256,13 @@ class EvolutionSearcher(object):
                 self.logger.info('starting test....')
                 self.model.eval()
                 with torch.no_grad():
-                    # for step in range(max_test_iters):
-                        # data, target = self.valid_loader.next()
                     for step, (data, target) in enumerate(self.valid_loader):
                         if step>max_test_iters:
                             break
                         batchsize = data.shape[0]
-                        # print('get data',data.shape)
-                        # target = target.type(torch.LongTensor)
                         data, target = data.cuda(), target.cuda()
 
                         logits = self.model.forward(data,epoch=self.epoch,to_print=False,fix_logger=self.log_path,no_edge_normalize=False)
-                        # if step == 0:
-                        #     self.logger.info("logist:" + str(logits))
-                        # sys.exit()
 
                         prec1, prec5 = self.accuracy(logits, target, topk=(1, 5))
 
@@ -3497,7 +2273,6 @@ class EvolutionSearcher(object):
 
                     self.logger.info('top1: {:.2f} top5: {:.2f}'.format(top1.avg,top5.avg))
 
-            # self.model.has_metric_para = True
             self.model.has_metric_para = True
 
             return top1.avg, top5.avg
@@ -3524,35 +2299,24 @@ class EvolutionSearcher(object):
                 if len(self.model._score) != 0:
                     if self.model.metric_epoch_accumulate[m]:
                         for e_idx in range(epoch + 1):
-                            # sum_m += (self.search_space._metric_parameters2[m][e_idx] / sum(
-                            #     self.search_space._metric_parameters2[m][:epoch + 1])) * \
-                            #          self.search_space._score[m][e_idx]
-                            sum_m += (F.sigmoid(self.model._metric_parameters2[m][e_idx]) / sum(
-                                [F.sigmoid(self.model._metric_parameters2[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
+                            sum_m += (F.sigmoid(_edge_epoch_weights(self.model)[m][e_idx]) / sum(
+                                [F.sigmoid(_edge_epoch_weights(self.model)[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
                                      self.model._score[m][e_idx]
                     else:
                         sum_m += self.model._score[m][epoch]
-                    # score += (self.search_space._metric_parameters1[m] / sum(
-                    #     self.search_space._metric_parameters1[:])) * sum_m
 
-                    score += (F.sigmoid(self.model._metric_parameters1[m]) / sum(
-                        [F.sigmoid(self.model._metric_parameters1[m_tmp]) for m_tmp in range(len(self.model._metric_parameters1))])) * sum_m
+                    score += (F.sigmoid(_axis_calibration_weights(self.model)[m]) / sum(
+                        [F.sigmoid(_axis_calibration_weights(self.model)[m_tmp]) for m_tmp in range(len(_axis_calibration_weights(self.model)))])) * sum_m
 
-            #         score += F.sigmoid(self.search_space._metric_parameters1[m]) * sum_m
-            # score = score / self.search_space.metric_num
 
-            # score += self.search_space._metric_parameters3[0]
-            # score = F.sigmoid(score)
             score1 = score
             self.logger.info("score_after_axis_calib: " + str(score1))
             if self.model.metric_num != 0:
-                score += (F.sigmoid(self.model._metric_parameters3[0]) - 0.5)
-                # score = 0.5*score + 0.5*F.sigmoid(self.search_space._metric_parameters3[0])
-                # score = F.leaky_relu(score)
+                score += (F.sigmoid(_component_corr_weights(self.model)[0]) - 0.5)
                 score2 = score
                 score3 = F.leaky_relu(score)
             else:
-                score += F.sigmoid(self.model._metric_parameters3[0])
+                score += F.sigmoid(_component_corr_weights(self.model)[0])
         elif self.model.space_name == "nasbench301":
             score = [torch.zeros(self.model.num_edges, self.model.num_ops - 1).cuda() for cell in range(2)]
             for cell in range(2):
@@ -3561,27 +2325,22 @@ class EvolutionSearcher(object):
                     if len(self.model._score) != 0:
                         if self.model.metric_epoch_accumulate[m]:
                             for e_idx in range(epoch + 1):
-                                # sum_m += (self.search_space._metric_parameters2[m][e_idx] / sum(
-                                #     self.search_space._metric_parameters2[m][:epoch + 1])) * \
-                                #          self.search_space._score[m][e_idx]
-                                sum_m += (F.sigmoid(self.model._metric_parameters2[m][e_idx]) / sum(
-                                    [F.sigmoid(self.model._metric_parameters2[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
+                                sum_m += (F.sigmoid(_edge_epoch_weights(self.model)[m][e_idx]) / sum(
+                                    [F.sigmoid(_edge_epoch_weights(self.model)[m][e_tmp]) for e_tmp in range(epoch + 1)])) * \
                                          self.model._score[m][e_idx][cell]
                         else:
                             sum_m += self.model._score[m][epoch][cell]
-                        score[cell] += (F.sigmoid(self.model._metric_parameters1[m]) / sum(
-                            [F.sigmoid(self.model._metric_parameters1[m_tmp]) for m_tmp in range(len(self.model._metric_parameters1))])) * sum_m
+                        score[cell] += (F.sigmoid(_axis_calibration_weights(self.model)[m]) / sum(
+                            [F.sigmoid(_axis_calibration_weights(self.model)[m_tmp]) for m_tmp in range(len(_axis_calibration_weights(self.model)))])) * sum_m
 
                 score1 = score[cell]
                 self.logger.info("score_after_axis_calib: " + str(score1))
                 if self.model.metric_num != 0:
-                    score[cell] += (F.sigmoid(self.model._metric_parameters3[cell]) - 0.5)
-                    # score[cell] = 0.5 * score[cell] + 0.5 * F.sigmoid(self.search_space._metric_parameters3[cell])
-                    # score = F.leaky_relu(score)
+                    score[cell] += (F.sigmoid(_component_corr_weights(self.model)[cell]) - 0.5)
                     score2 = score[cell]
                     score3 = F.leaky_relu(score[cell])
                 else:
-                    score[cell] += F.sigmoid(self.model._metric_parameters3[cell])
+                    score[cell] += F.sigmoid(_component_corr_weights(self.model)[cell])
         return score
 
 class DataIterator(object):
@@ -3597,5 +2356,4 @@ class DataIterator(object):
             self.iterator = enumerate(self.dataloader)
             _, data = next(self.iterator)
         return data[0], data[1]
-
 

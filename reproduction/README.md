@@ -1,15 +1,15 @@
-# Reproduction Package
+# ProxyDiff Reproducibility Package
 
-This directory contains the public clean reproduction code.
+This directory contains the cleaned reproduction code for the ProxyDiff paper.
 
-- `nas/`: NB301 ProxyDiff score, cache, refinement, and evaluation pipeline.
-- `analysis/`: reported-result checkers and figure-generation scripts.
+The current package is organized for the NAS reproduction path:
 
-The NAS pipeline is the executable main-result path.  The analysis scripts
-operate on recorded result artifacts and are separate from the expensive
-score/refinement runs.
+- `nas_v2/`: NAS-Bench-301 operation scoring and ProxyDiff refinement.
 
-Package check:
+The scripts are designed to run in the hdd experiment environment used for the paper. Paths can be overridden through environment variables in each launcher.
+
+Before running experiments, check that the clean package and small evidence
+files are present:
 
 ```bash
 python reproduction/check_package.py

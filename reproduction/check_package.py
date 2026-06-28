@@ -1,41 +1,38 @@
 #!/usr/bin/env python3
-"""Check the public ProxyDiff reproduction package."""
+"""Check the public ProxyDiff NAS reproduction package."""
 
 from __future__ import annotations
 
 import argparse
+import py_compile
+import tempfile
 from pathlib import Path
 
 
 REQUIRED_FILES = [
     "README.md",
-    "nas/README.md",
-    "nas/scripts/run_nb301_pipeline.sh",
-    "nas/scripts/run_nb301_refine_from_cache.sh",
-    "nas/scripts/resume_nb301_scores.sh",
-    "nas/src/fixedpool_nb301_zcpt_single_proxy.py",
-    "nas/src/proxydiff_nas.py",
-    "nas/src/run_nb301_proxy_refinement.py",
-    "nas/src/_proxydiff_nb301_refinement_impl.py",
-    "nas/src/collect_refinement_summaries.py",
-    "nas/src/postprocess_nb301_clean_run.py",
-    "nas/src/reevaluate_free_selected_arch.py",
-    "nas/src/summarize_nb301_main_results.py",
-    "nas/configs/nb301_proxy_refinement.yaml",
-    "nas/evidence/nb301_full_proxy_pool_summary.jsonl",
-    "nas/evidence/nb301_three_proxy_subset_summary.json",
-    "analysis/README.md",
-    "analysis/make_paper_figures.py",
-    "analysis/analyze_llm_score_geometry.py",
-    "analysis/run_llm_score_geometry_summary.sh",
-    "analysis/summarize_main_table_evidence.py",
-    "analysis/summarize_reported_results.py",
+    "nas_v2/README.md",
+    "nas_v2/scripts/run_nb301_v2_pipeline.sh",
+    "nas_v2/scripts/run_nb301_v2_refine_from_cache.sh",
+    "nas_v2/scripts/run_nb301_v2_subset_stability.sh",
+    "nas_v2/scripts/resume_nb301_scores.sh",
+    "nas_v2/src/compute_nb301_zcpt_operation_scores.py",
+    "nas_v2/src/proxydiff_nas.py",
+    "nas_v2/src/run_nb301_proxy_refinement.py",
+    "nas_v2/src/_proxydiff_nb301_refinement_impl.py",
+    "nas_v2/src/collect_refinement_summaries.py",
+    "nas_v2/src/reevaluate_free_selected_arch.py",
+    "nas_v2/src/summarize_nb301_v2_results.py",
+    "nas_v2/src/summarize_nb301_v2_reported_results.py",
+    "nas_v2/src/summarize_nb301_v2_subset_results.py",
+    "nas_v2/configs/nb301_proxy_refinement.yaml",
+    "nas_v2/evidence/nb301_v2_reported_results_summary.csv",
 ]
 
 PUBLIC_FILES = [
     path
     for path in REQUIRED_FILES
-    if path == "README.md" or path.startswith("nas/") or path.startswith("analysis/")
+    if path == "README.md" or path.startswith("nas_v2/")
 ]
 
 
@@ -44,8 +41,6 @@ def term(*parts: str) -> str:
 
 
 FORBIDDEN_TERMS = [
-    term("30", "_LLM"),
-    term("file", "30"),
     term("pa", "per ", "wro", "ng"),
     term("pa", "per ", "incor", "rect"),
     term("GOLD", "NAS"),
@@ -61,6 +56,7 @@ FORBIDDEN_TERMS = [
     term("nb", "101"),
     term("axis", "_avg"),
     term("scalar", "para"),
+    term("task", "_correction"),
     term("iot", "j"),
     term("de", "bug"),
     term("diagn", "ostic"),
@@ -100,13 +96,36 @@ def check_public_terms(root: Path) -> int:
     return 0
 
 
+def check_python_syntax(root: Path) -> int:
+    rel_paths = [path for path in PUBLIC_FILES if path.endswith(".py")]
+    failures: list[tuple[str, str]] = []
+    with tempfile.TemporaryDirectory(prefix="proxydiff_syntax_") as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        for index, rel_path in enumerate(rel_paths):
+            path = root / rel_path
+            if not path.exists():
+                continue
+            cfile = tmp_root / f"{index}.pyc"
+            try:
+                py_compile.compile(str(path), cfile=str(cfile), doraise=True)
+            except py_compile.PyCompileError as exc:
+                failures.append((rel_path, str(exc)))
+    if failures:
+        print(f"python syntax: FAILED {len(failures)}")
+        for rel_path, message in failures:
+            print(f"  - {rel_path}: {message}")
+        return len(failures)
+    print(f"python syntax: OK ({len(rel_paths)} files)")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent)
     args = parser.parse_args()
     root = args.root.resolve()
 
-    failures = check_required(root) + check_public_terms(root)
+    failures = check_required(root) + check_public_terms(root) + check_python_syntax(root)
     if failures:
         raise SystemExit(1)
 

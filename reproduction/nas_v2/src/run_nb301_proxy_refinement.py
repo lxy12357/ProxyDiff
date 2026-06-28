@@ -14,11 +14,136 @@ import sys
 import numpy as np
 import torch
 
+
+def install_configspace_normal_bounds_compat() -> None:
+    """Allow NASBench-301 ConfigSpace JSON files to load on newer ConfigSpace."""
+    try:
+        from ConfigSpace.read_and_write import dictionary as cs_dictionary
+    except Exception:
+        return
+
+    float_decoder = getattr(cs_dictionary, "_decode_normal_float", None)
+    int_decoder = getattr(cs_dictionary, "_decode_normal_int", None)
+    if float_decoder is None or getattr(float_decoder, "_proxydiff_normal_bounds_compat", False):
+        return
+
+    def _decode_normal_float_compat(item, cs, dec):
+        if "lower" not in item or "upper" not in item:
+            item = dict(item)
+            mu = float(item.get("mu", 0.0))
+            sigma = abs(float(item.get("sigma", 1.0)))
+            if item.get("log", False):
+                item.setdefault("lower", max(mu * 1e-3, 1e-12))
+                item.setdefault("upper", max(mu * 1e3, mu + 10.0 * sigma, 1.0))
+            else:
+                item.setdefault("lower", mu - 10.0 * sigma)
+                item.setdefault("upper", mu + 10.0 * sigma)
+        return float_decoder(item, cs, dec)
+
+    def _decode_normal_int_compat(item, cs, dec):
+        if "lower" not in item or "upper" not in item:
+            item = dict(item)
+            mu = int(round(float(item.get("mu", 0))))
+            sigma = max(1, int(round(abs(float(item.get("sigma", 1))))))
+            item.setdefault("lower", mu - 10 * sigma)
+            item.setdefault("upper", mu + 10 * sigma)
+        return int_decoder(item, cs, dec)
+
+    _decode_normal_float_compat._proxydiff_normal_bounds_compat = True
+    _decode_normal_int_compat._proxydiff_normal_bounds_compat = True
+    cs_dictionary._decode_normal_float = _decode_normal_float_compat
+    if int_decoder is not None:
+        cs_dictionary._decode_normal_int = _decode_normal_int_compat
+    if hasattr(cs_dictionary, "HYPERPARAMETER_DECODERS"):
+        cs_dictionary.HYPERPARAMETER_DECODERS["normal_float"] = _decode_normal_float_compat
+        if int_decoder is not None:
+            cs_dictionary.HYPERPARAMETER_DECODERS["normal_int"] = _decode_normal_int_compat
+
+
+install_configspace_normal_bounds_compat()
+
 NAS_RUNTIME_PACKAGE_ROOT = os.environ.get(
     "NAS_RUNTIME_PACKAGE_ROOT",
     "/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime",
 )
 sys.path.insert(0, NAS_RUNTIME_PACKAGE_ROOT)
+
+
+def install_nasbench301_configloader_compat() -> None:
+    """Patch NASBench-301 ConfigSpace internal-field access."""
+    try:
+        from ConfigSpace import hyperparameters as CSH
+        from nasbench301.surrogate_models import utils as nb301_utils
+    except Exception:
+        return
+
+    original = getattr(nb301_utils.ConfigLoader, "load_config_space", None)
+    if original is None or getattr(original, "_proxydiff_configspace_compat", False):
+        return
+
+    def _drop_hyperparameter(config_space, name: str) -> None:
+        internal_mapping = getattr(config_space, "_hyperparameters", None)
+        if hasattr(internal_mapping, "pop") and internal_mapping is not config_space:
+            internal_mapping.pop(name, None)
+            return
+
+        dag = getattr(config_space, "_dag", None)
+        if dag is None or name not in getattr(dag, "nodes", {}):
+            return
+        for mapping_name in (
+            "nodes",
+            "roots",
+            "non_roots",
+            "index_of",
+            "children_of",
+            "parents_of",
+            "child_conditions_of",
+            "parent_conditions_of",
+        ):
+            mapping = getattr(dag, mapping_name, None)
+            if hasattr(mapping, "pop"):
+                mapping.pop(name, None)
+        dag.at = [hp_name for hp_name in getattr(dag, "at", []) if hp_name != name]
+        dag.hyperparameters = [hp for hp in getattr(dag, "hyperparameters", []) if hp.name != name]
+        dag.index_of = {hp_name: idx for idx, hp_name in enumerate(dag.at)}
+        for idx, hp_name in enumerate(dag.at):
+            if hp_name in dag.nodes:
+                dag.nodes[hp_name].idx = idx
+        config_space._len = len(dag.at)
+
+    @staticmethod
+    def _load_config_space_compat(path):
+        with open(path, "r") as fh:
+            config_space = nb301_utils.config_space_json_r_w.read(fh.read())
+
+        replacements = [
+            CSH.UniformIntegerHyperparameter(
+                name="NetworkSelectorDatasetInfo:darts:layers", lower=1, upper=10000
+            ),
+            CSH.UniformIntegerHyperparameter(
+                name="SimpleLearningrateSchedulerSelector:cosine_annealing:T_max",
+                lower=1,
+                upper=10000,
+            ),
+            CSH.UniformIntegerHyperparameter(
+                name="NetworkSelectorDatasetInfo:darts:init_channels", lower=1, upper=10000
+            ),
+            CSH.UniformFloatHyperparameter(
+                name="SimpleLearningrateSchedulerSelector:cosine_annealing:eta_min",
+                lower=0,
+                upper=10000,
+            ),
+        ]
+        for hp in replacements:
+            _drop_hyperparameter(config_space, hp.name)
+        config_space.add_hyperparameters(replacements)
+        return config_space
+
+    _load_config_space_compat._proxydiff_configspace_compat = True
+    nb301_utils.ConfigLoader.load_config_space = _load_config_space_compat
+
+
+install_nasbench301_configloader_compat()
 
 from _proxydiff_nb301_refinement_impl import ZeroCostPredictorEvaluator
 from ZeroCostNAS.predictors import ZeroCost
@@ -108,17 +233,17 @@ def apply_evaluator_compat_env():
         "REFINEMENT_AXIS_WEIGHTING": evaluator_key("_METRIC_WEIGHT_STYLE"),
         "AXIS_SCALE_LAYOUT": evaluator_key("_AXIS_CALIB_LAYOUT"),
         "RESIDUAL_AXIS_SCALE": evaluator_key("_RESIDUAL_SCALE"),
-        "COMPONENT_CORR_PARA_AXIS_SCALE": evaluator_key("_COMPONENT_CORR_SCALE"),
-        "AXIS_CALIB_PARA_STEPS": evaluator_key("_AXIS_CALIB_STEPS"),
-        "FOCUS_MASK_TOPK": evaluator_key("_PROGRESSIVE_MASK_TOPK"),
+        "COMPONENT_CORRECTION_AXIS_SCALE": evaluator_key("_COMPONENT_CORR_SCALE"),
+        "AXIS_CALIBRATION_STEPS": evaluator_key("_AXIS_CALIB_STEPS"),
+        "TOPK_SELECTION_COUNT": evaluator_key("_PROGRESSIVE_MASK_TOPK"),
         "EVALUATE_INITIAL_SCORE": evaluator_key("_PRETRAIN_EVAL"),
         "INITIAL_SCORE_ONLY": evaluator_key("_PRETRAIN_ONLY"),
         "SAVE_STAGE_ARTIFACTS": evaluator_key("_DUMP_EPOCH_ARTIFACTS"),
         "REFINEMENT_EPOCHS": evaluator_key("_METRIC_EPOCHS"),
-        "AXIS_CALIB_PARA_LR": evaluator_key("_AXIS_CALIB_LR"),
-        "AXIS_CALIB_PARA_WEIGHT_DECAY": evaluator_key("_AXIS_CALIB_WEIGHT_DECAY"),
-        "COMPONENT_CORR_PARA_LR": evaluator_key("_COMPONENT_CORR_LR"),
-        "COMPONENT_CORR_PARA_WEIGHT_DECAY": evaluator_key("_COMPONENT_CORR_WEIGHT_DECAY"),
+        "AXIS_CALIBRATION_LR": evaluator_key("_AXIS_CALIB_LR"),
+        "AXIS_CALIBRATION_WEIGHT_DECAY": evaluator_key("_AXIS_CALIB_WEIGHT_DECAY"),
+        "COMPONENT_CORRECTION_LR": evaluator_key("_COMPONENT_CORR_LR"),
+        "COMPONENT_CORRECTION_WEIGHT_DECAY": evaluator_key("_COMPONENT_CORR_WEIGHT_DECAY"),
         "MAX_REFINEMENT_STEPS": evaluator_key("_MAX_TRAIN_STEPS"),
         "DISABLE_EDGE_NORMALIZATION": evaluator_key("_NO_EDGE_NORMALIZE"),
         "EVALUATE_DECODE_VARIANTS": evaluator_key("_EVAL_VARIANTS"),
@@ -132,28 +257,21 @@ def apply_evaluator_compat_env():
             os.environ["REFINEMENT_OBJECTIVE"]
         )
 
-    legacy_axis_calibration_policy = "topk_after_axis_" + "calib" + "ration"
-    old_axis_calib_parameter_policy = "topk_after_axis_" + "calib_" + "para"
-    old_axis_calib_parameter_source = "axis_" + "calib_" + "para"
-    focus_policy = os.environ.get("FOCUS_MASK_POLICY", "").strip().lower()
-    if focus_policy:
-        if focus_policy in {legacy_axis_calibration_policy, old_axis_calib_parameter_policy}:
+    topk_policy = os.environ.get("TOPK_SELECTION_POLICY", "").strip().lower()
+    if topk_policy:
+        if topk_policy == "topk_after_axis_" + "calibration":
             os.environ[evaluator_key("_PROGRESSIVE_MASK")] = "topk_after_axis_calib"
         else:
-            os.environ[evaluator_key("_PROGRESSIVE_MASK")] = focus_policy
+            os.environ[evaluator_key("_PROGRESSIVE_MASK")] = topk_policy
 
-    focus_source = os.environ.get("FOCUS_MASK_SOURCE", "").strip().lower()
-    if focus_source:
-        legacy_axis_component_source = "axis_" + "calib" + "ration_with_" + "component_" + "correction"
-        if focus_source in {"axis_calibrated_score", old_axis_calib_parameter_source}:
+    topk_source = os.environ.get("TOPK_SELECTION_SOURCE", "").strip().lower()
+    if topk_source:
+        if topk_source == "axis_calibrated_score":
             os.environ[evaluator_key("_PROGRESSIVE_MASK_SCORE")] = "axis_calib"
-        elif focus_source in (
-            "axis_calib_with_component_corr",
-            legacy_axis_component_source,
-        ):
+        elif topk_source == "axis_calib_with_component_corr":
             os.environ[evaluator_key("_PROGRESSIVE_MASK_SCORE")] = "axis_calib_with_component_corr"
         else:
-            os.environ[evaluator_key("_PROGRESSIVE_MASK_SCORE")] = focus_source
+            os.environ[evaluator_key("_PROGRESSIVE_MASK_SCORE")] = topk_source
 
 
 apply_evaluator_compat_env()
@@ -230,7 +348,7 @@ predictor_evaluator.evaluate(
     weight_path=None,
     step=False,
     perturbation=True,
-    pruning=False,
+    train_search_weights=False,
     no_zero=True,
     arch_num=1000,
     load_all=load_all,

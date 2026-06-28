@@ -7,14 +7,12 @@ import json
 import os
 
 
-def refinement_artifact_prefixes():
-    legacy = "{}{}".format("ra" + "nk", 1 + 1)
-    return ("proxydiff", legacy)
+ARTIFACT_PREFIX = "proxydiff"
 
 
 STAGE_NAME_MAP = {
     "epoch_-01": "score_prior",
-    "step_100_mask_score_params": "axis_calibrated_focus",
+    "step_100_mask_score_params": "axis_calibrated_topk",
     "epoch_000": "task_conditioned_refinement",
 }
 
@@ -36,14 +34,12 @@ def find_latest_run(root):
 def load_epoch_summaries(run_dir):
     rows = []
     paths = []
-    for prefix in refinement_artifact_prefixes():
-        paths.extend(glob.glob(os.path.join(run_dir, f"{prefix}_epoch_*_summary.json")))
+    paths.extend(glob.glob(os.path.join(run_dir, f"{ARTIFACT_PREFIX}_epoch_*_summary.json")))
     for path in sorted(set(paths)):
         with open(path, "r") as f:
             data = json.load(f)
         artifact_name = os.path.basename(path).replace("_summary.json", "")
-        for prefix in refinement_artifact_prefixes():
-            artifact_name = artifact_name.replace(f"{prefix}_", "")
+        artifact_name = artifact_name.replace(f"{ARTIFACT_PREFIX}_", "")
         rows.append(
             {
                 "stage": STAGE_NAME_MAP.get(artifact_name, artifact_name),

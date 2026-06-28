@@ -28,12 +28,137 @@ from pathlib import Path
 import numpy as np
 import torch
 
+
+def install_configspace_normal_bounds_compat() -> None:
+    """Allow NASBench-301 ConfigSpace JSON files to load on newer ConfigSpace."""
+    try:
+        from ConfigSpace.read_and_write import dictionary as cs_dictionary
+    except Exception:
+        return
+
+    float_decoder = getattr(cs_dictionary, "_decode_normal_float", None)
+    int_decoder = getattr(cs_dictionary, "_decode_normal_int", None)
+    if float_decoder is None or getattr(float_decoder, "_proxydiff_normal_bounds_compat", False):
+        return
+
+    def _decode_normal_float_compat(item, cs, dec):
+        if "lower" not in item or "upper" not in item:
+            item = dict(item)
+            mu = float(item.get("mu", 0.0))
+            sigma = abs(float(item.get("sigma", 1.0)))
+            if item.get("log", False):
+                item.setdefault("lower", max(mu * 1e-3, 1e-12))
+                item.setdefault("upper", max(mu * 1e3, mu + 10.0 * sigma, 1.0))
+            else:
+                item.setdefault("lower", mu - 10.0 * sigma)
+                item.setdefault("upper", mu + 10.0 * sigma)
+        return float_decoder(item, cs, dec)
+
+    def _decode_normal_int_compat(item, cs, dec):
+        if "lower" not in item or "upper" not in item:
+            item = dict(item)
+            mu = int(round(float(item.get("mu", 0))))
+            sigma = max(1, int(round(abs(float(item.get("sigma", 1))))))
+            item.setdefault("lower", mu - 10 * sigma)
+            item.setdefault("upper", mu + 10 * sigma)
+        return int_decoder(item, cs, dec)
+
+    _decode_normal_float_compat._proxydiff_normal_bounds_compat = True
+    _decode_normal_int_compat._proxydiff_normal_bounds_compat = True
+    cs_dictionary._decode_normal_float = _decode_normal_float_compat
+    if int_decoder is not None:
+        cs_dictionary._decode_normal_int = _decode_normal_int_compat
+    if hasattr(cs_dictionary, "HYPERPARAMETER_DECODERS"):
+        cs_dictionary.HYPERPARAMETER_DECODERS["normal_float"] = _decode_normal_float_compat
+        if int_decoder is not None:
+            cs_dictionary.HYPERPARAMETER_DECODERS["normal_int"] = _decode_normal_int_compat
+
+
+install_configspace_normal_bounds_compat()
+
 NAS_RUNTIME_PACKAGE_ROOT = os.environ.get(
     "NAS_RUNTIME_PACKAGE_ROOT",
     "/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime",
 )
 REPRO_ROOT = os.environ.get("REPRO", "/hdd/xiaoyun/ProxyDARTS/Reproduction")
 sys.path.insert(0, NAS_RUNTIME_PACKAGE_ROOT)
+
+
+def install_nasbench301_configloader_compat() -> None:
+    """Patch NASBench-301 ConfigSpace internal-field access."""
+    try:
+        from ConfigSpace import hyperparameters as CSH
+        from nasbench301.surrogate_models import utils as nb301_utils
+    except Exception:
+        return
+
+    original = getattr(nb301_utils.ConfigLoader, "load_config_space", None)
+    if original is None or getattr(original, "_proxydiff_configspace_compat", False):
+        return
+
+    def _drop_hyperparameter(config_space, name: str) -> None:
+        internal_mapping = getattr(config_space, "_hyperparameters", None)
+        if hasattr(internal_mapping, "pop") and internal_mapping is not config_space:
+            internal_mapping.pop(name, None)
+            return
+
+        dag = getattr(config_space, "_dag", None)
+        if dag is None or name not in getattr(dag, "nodes", {}):
+            return
+        for mapping_name in (
+            "nodes",
+            "roots",
+            "non_roots",
+            "index_of",
+            "children_of",
+            "parents_of",
+            "child_conditions_of",
+            "parent_conditions_of",
+        ):
+            mapping = getattr(dag, mapping_name, None)
+            if hasattr(mapping, "pop"):
+                mapping.pop(name, None)
+        dag.at = [hp_name for hp_name in getattr(dag, "at", []) if hp_name != name]
+        dag.hyperparameters = [hp for hp in getattr(dag, "hyperparameters", []) if hp.name != name]
+        dag.index_of = {hp_name: idx for idx, hp_name in enumerate(dag.at)}
+        for idx, hp_name in enumerate(dag.at):
+            if hp_name in dag.nodes:
+                dag.nodes[hp_name].idx = idx
+        config_space._len = len(dag.at)
+
+    @staticmethod
+    def _load_config_space_compat(path):
+        with open(path, "r") as fh:
+            config_space = nb301_utils.config_space_json_r_w.read(fh.read())
+
+        replacements = [
+            CSH.UniformIntegerHyperparameter(
+                name="NetworkSelectorDatasetInfo:darts:layers", lower=1, upper=10000
+            ),
+            CSH.UniformIntegerHyperparameter(
+                name="SimpleLearningrateSchedulerSelector:cosine_annealing:T_max",
+                lower=1,
+                upper=10000,
+            ),
+            CSH.UniformIntegerHyperparameter(
+                name="NetworkSelectorDatasetInfo:darts:init_channels", lower=1, upper=10000
+            ),
+            CSH.UniformFloatHyperparameter(
+                name="SimpleLearningrateSchedulerSelector:cosine_annealing:eta_min",
+                lower=0,
+                upper=10000,
+            ),
+        ]
+        for hp in replacements:
+            _drop_hyperparameter(config_space, hp.name)
+        config_space.add_hyperparameters(replacements)
+        return config_space
+
+    _load_config_space_compat._proxydiff_configspace_compat = True
+    nb301_utils.ConfigLoader.load_config_space = _load_config_space_compat
+
+
+install_nasbench301_configloader_compat()
 
 from ZeroCostNAS.utils.get_dataset_api import get_nasbench301_api  # noqa: E402
 
@@ -156,15 +281,6 @@ def query_acc(model, arch_key):
 
 
 def method_name_from_path(path: Path) -> str:
-    name = path.name
-    legacy_token = "rank{}".format(1 + 1)
-    legacy_epoch = f"{legacy_token}_epoch_"
-    if f"__{legacy_epoch}" in name and name.endswith("_score_params.pt"):
-        prefix, rest = name.split(f"__{legacy_epoch}", 1)
-        epoch = rest.replace("_score_params.pt", "")
-        return f"{prefix}__{legacy_epoch}{epoch}"
-    if name.startswith(legacy_epoch) and name.endswith("_score_params.pt"):
-        return name.replace("_score_params.pt", "")
     return path.stem
 
 
