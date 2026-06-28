@@ -3,12 +3,12 @@
 This folder reproduces the NB301 ProxyDiff main-table rows from operation-score
 computation through final free-decoded architecture evaluation.
 
-Verified outputs on the hdd GPU0 environment:
+Fresh-score outputs verified on the hdd GPU0 environment:
 
 | row | score prior | axis-calibrated selection | component-corrected refinement | rank path |
 |---|---:|---:|---:|---|
-| full proxy pool | 93.862175 | 94.637665 | 94.695648 | 117 -> 1 -> 1 |
-| 3-proxy subset | 94.515373 | 94.515373 | 94.530296 | 1 -> 1 -> 1 |
+| full proxy pool | 93.723389 | 94.349678 | 94.512589 | 180 -> 5 -> 1 |
+| 3-proxy subset | 94.250977 | 94.425629 | 94.425629 | 12 -> 2 -> 2 |
 
 Both rows are non-decreasing by NB301 surrogate accuracy, and the final full
 proxy-pool result is higher than the final 3-proxy result.
@@ -36,15 +36,9 @@ REFINEMENT_PY=/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python
 OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main
 ```
 
-On the hdd environment, the launcher first uses the prepared operation-score
-root when it is present:
-
-```bash
-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_operation_scores
-```
-
-Set `OP_SCORE_ROOT` to another directory to rebuild or use a different
-operation-score root.
+By default the launcher writes fresh operation scores under
+`${OUT_ROOT}/operation_scores`.  Set `OP_SCORE_ROOT` only when intentionally
+using a precomputed operation-score directory.
 
 Override them only when rebuilding the environment:
 
@@ -92,8 +86,8 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr |
 |---|---:|---:|---:|---:|
-| full proxy pool | 100 | 150 | 1.00 | 0.05 |
-| 3-proxy subset | 5 | 40 | 1.00 | 0.05 |
+| full proxy pool | 50 | 115 | 1.00 | 0.10 |
+| 3-proxy subset | 10 | 45 | 0.45 | 0.025 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
 and seed `9000`.

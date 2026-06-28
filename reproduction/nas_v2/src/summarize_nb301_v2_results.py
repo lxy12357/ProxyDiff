@@ -12,11 +12,11 @@ from pathlib import Path
 RUNS = {
     "full_proxy_pool": {
         "file": "full_proxy_pool_free_decode.json",
-        "axis_step": 100,
+        "axis_step": 50,
     },
     "three_proxy_subset": {
         "file": "three_proxy_subset_free_decode.json",
-        "axis_step": 5,
+        "axis_step": 10,
     },
 }
 

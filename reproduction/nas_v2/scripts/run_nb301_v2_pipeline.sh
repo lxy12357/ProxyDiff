@@ -12,14 +12,7 @@ SCORE_LD_LIBRARY_PATH="${SCORE_LD_LIBRARY_PATH:-}"
 REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-}"
 OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main}"
 LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
-PREPARED_OP_SCORE_ROOT="${PREPARED_OP_SCORE_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_operation_scores}"
-if [[ -z "${OP_SCORE_ROOT:-}" ]]; then
-  if [[ -d "$PREPARED_OP_SCORE_ROOT" ]]; then
-    OP_SCORE_ROOT="$PREPARED_OP_SCORE_ROOT"
-  else
-    OP_SCORE_ROOT="${OUT_ROOT}/operation_scores"
-  fi
-fi
+OP_SCORE_ROOT="${OP_SCORE_ROOT:-${OUT_ROOT}/operation_scores}"
 FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${REPRO}/fixed_archs/arch_dataset_20cell_c36.pt}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -172,8 +165,8 @@ run_refinement() {
   cd "$REPRO"
 }
 
-run_refinement full_proxy_pool full_proxy_pool 100 150 1.00 0.05
-run_refinement three_proxy_subset three_proxy_subset 5 40 1.00 0.05
+run_refinement full_proxy_pool full_proxy_pool 50 115 1.00 0.10
+run_refinement three_proxy_subset three_proxy_subset 10 45 0.45 0.025
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \
