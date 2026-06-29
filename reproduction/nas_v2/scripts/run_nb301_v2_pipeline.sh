@@ -154,7 +154,18 @@ run_refinement() {
   run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/collect_refinement_summaries.py" "$run_name" > "$LOG_ROOT/collect_${run_label}.log" 2>&1
 
   local latest
-  latest="$(ls -td "${run_name}"/correlation/nasbench301/cifar10/nwot/9000/*_perturb | head -1)"
+  latest="$(python3 - "$run_name" <<'PY'
+import glob
+import os
+import sys
+
+run_name = sys.argv[1]
+items = glob.glob(os.path.join(run_name, "correlation/nasbench301/cifar10/nwot/9000/*_perturb"))
+if not items:
+    raise SystemExit(f"no refinement run directories found for {run_name}")
+print(max(items, key=os.path.getmtime))
+PY
+)"
   echo "$latest" > "$OUT_ROOT/${run_label}_latest_run_dir.txt"
   copy_refinement_artifacts "$latest" "$OUT_ROOT/${run_label}_artifacts" "$axis_calibration_steps"
   run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/reevaluate_free_selected_arch.py" \

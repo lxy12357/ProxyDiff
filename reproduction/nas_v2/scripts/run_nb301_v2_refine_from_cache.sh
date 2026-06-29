@@ -114,7 +114,18 @@ export PROXYDIFF_FIXED_SAMPLER_SEED=off
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/run_nb301_proxy_refinement.py" --config-file "$CFG" > "$LOG_ROOT/refine.log" 2>&1
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/collect_refinement_summaries.py" "$RUN_NAME" > "$LOG_ROOT/collect.log" 2>&1
 
-LATEST="$(ls -td "${RUN_NAME}"/correlation/nasbench301/cifar10/nwot/9000/*_perturb | head -1)"
+LATEST="$(python3 - "$RUN_NAME" <<'PY'
+import glob
+import os
+import sys
+
+run_name = sys.argv[1]
+items = glob.glob(os.path.join(run_name, "correlation/nasbench301/cifar10/nwot/9000/*_perturb"))
+if not items:
+    raise SystemExit(f"no refinement run directories found for {run_name}")
+print(max(items, key=os.path.getmtime))
+PY
+)"
 echo "$LATEST" > "$OUT_ROOT/latest_run_dir.txt"
 copy_refinement_artifacts "$LATEST" "$OUT_ROOT/artifacts" "$AXIS_CALIBRATION_STEPS"
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/reevaluate_free_selected_arch.py" \
