@@ -113,6 +113,7 @@ run_refinement() {
   local total_training_steps="$4"
   local residual_axis_scale="$5"
   local component_correction_lr="$6"
+  local component_correction_scale="$7"
 
   local cache="$OUT_ROOT/caches/${proxy_set}_proxydiff_cache.pt"
   local run_name="proxydiff_nb301_v2_${run_label}"
@@ -136,7 +137,7 @@ run_refinement() {
   export TOPK_SELECTION_COUNT=5
   export MAX_REFINEMENT_STEPS="$total_training_steps"
   export COMPONENT_CORRECTION_LR="$component_correction_lr"
-  export COMPONENT_CORRECTION_AXIS_SCALE=1.0
+  export COMPONENT_CORRECTION_AXIS_SCALE="$component_correction_scale"
   export COMPONENT_CORRECTION_WEIGHT_DECAY=0
   export RESIDUAL_AXIS_SCALE="$residual_axis_scale"
   export REFINEMENT_EPOCHS=1
@@ -165,8 +166,8 @@ run_refinement() {
   cd "$REPRO"
 }
 
-run_refinement full_proxy_pool full_proxy_pool 50 115 1.00 0.10
-run_refinement three_proxy_subset three_proxy_subset 10 45 0.50 0.025
+run_refinement full_proxy_pool full_proxy_pool 50 115 1.00 0.10 2.00
+run_refinement three_proxy_subset three_proxy_subset 10 45 0.50 0.025 1.00
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \
