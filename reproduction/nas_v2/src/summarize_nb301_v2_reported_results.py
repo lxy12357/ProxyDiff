@@ -11,7 +11,7 @@ from pathlib import Path
 BUNDLED_ROWS = [
     ("main_table", "full_proxy_pool_prior_acc", 93.723389),
     ("main_table", "full_proxy_pool_axis_acc", 94.349678),
-    ("main_table", "full_proxy_pool_final_acc", 94.569565),
+    ("main_table", "full_proxy_pool_final_acc", 94.587448),
     ("main_table", "full_proxy_pool_final_rank", 1.000000),
     ("main_table", "full_proxy_pool_score_gpu_hours", 4.571389),
     ("main_table", "full_proxy_pool_refinement_gpu_hours", 0.067500),
@@ -24,14 +24,14 @@ BUNDLED_ROWS = [
     ("component_ablation", "best_single_proxy_acc", 94.160000),
     ("component_ablation", "raw_multi_proxy_direct_acc", 93.881798),
     ("component_ablation", "raw_multi_proxy_task_conditioned_acc", 94.508881),
-    ("component_ablation", "proxydiff_v2_full_acc", 94.569565),
+    ("component_ablation", "proxydiff_v2_full_acc", 94.587448),
     ("proxy_geometry", "raw_proxy_mean_abs_spearman", 0.270993),
     ("proxy_geometry", "raw_proxy_effective_rank", 8.471959),
     ("proxy_geometry", "factorized_axis_mean_abs_spearman", 0.106081),
     ("proxy_geometry", "factorized_axis_effective_rank", 7.993569),
     ("refinement_trajectory", "score_prior_acc", 93.723389),
     ("refinement_trajectory", "axis_calibrated_selection_acc", 94.349678),
-    ("refinement_trajectory", "component_corrected_refinement_acc", 94.569565),
+    ("refinement_trajectory", "component_corrected_refinement_acc", 94.587448),
 ]
 
 SUBSET_BUNDLED_ROWS = [
