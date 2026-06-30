@@ -56,7 +56,7 @@ FINAL_8_PROXIES = [
     "zico",
 ]
 
-FINAL_3_PROXIES = ["jacob", "l2_norm", "zico"]
+FINAL_3_PROXIES = ["jacob", "l2_norm", "grad_norm"]
 
 AXIS_ORIENTATION_PROXIES = [
     "zcpt_jacob",
