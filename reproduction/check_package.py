@@ -17,6 +17,7 @@ REQUIRED_FILES = [
     "nas_v2/scripts/run_nb301_v2_subset_stability.sh",
     "nas_v2/scripts/resume_nb301_scores.sh",
     "nas_v2/src/compute_nb301_zcpt_operation_scores.py",
+    "nas_v2/src/run_nb301_zcpt_operation_scores.py",
     "nas_v2/src/proxydiff_nas.py",
     "nas_v2/src/run_nb301_proxy_refinement.py",
     "nas_v2/src/_proxydiff_nb301_refinement_impl.py",

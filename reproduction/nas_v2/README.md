@@ -117,7 +117,8 @@ python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
   precomputed ProxyDiff cache.
 - `scripts/run_nb301_v2_subset_stability.sh`: fixed-subset stability launcher.
 - `src/compute_nb301_zcpt_operation_scores.py`: NB301 ZCPT operation-ablation
-  score computation.
+  score computation. `src/run_nb301_zcpt_operation_scores.py` is the stable
+  launcher used by the shell pipeline.
 - `src/proxydiff_nas.py`: proxy score alignment, factorization, and cache
   writer.
 - `src/run_nb301_proxy_refinement.py`: clean wrapper around the NB301

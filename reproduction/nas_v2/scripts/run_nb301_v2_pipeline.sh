@@ -73,7 +73,7 @@ run_proxy_score() {
     return
   fi
   echo "===== operation score $method START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
-  run_with_optional_ld "$SCORE_LD_LIBRARY_PATH" "$SCORE_PY" "$NAS_SRC_DIR/compute_nb301_zcpt_operation_scores.py" \
+  run_with_optional_ld "$SCORE_LD_LIBRARY_PATH" "$SCORE_PY" "$NAS_SRC_DIR/run_nb301_zcpt_operation_scores.py" \
     --method "$method" \
     --arch-file "$FIXED_ARCH_FILE" \
     --out-dir "$out" \
