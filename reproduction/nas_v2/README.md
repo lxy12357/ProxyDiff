@@ -7,8 +7,8 @@ Fresh-score outputs verified on the hdd GPU0 environment:
 
 | row | score prior | axis-calibrated selection | component-corrected refinement | rank path |
 |---|---:|---:|---:|---|
-| full proxy pool | 93.723389 | 94.349678 | 94.587448 | 180 -> 5 -> 1 |
-| 3-proxy subset | 94.113464 | 94.361801 | 94.462784 | 32 -> 5 -> 2 |
+| full proxy pool | 93.723389 | 94.295372 | 94.482162 | 180 -> 8 -> 2 |
+| 3-proxy subset | 94.116646 | 94.163712 | 94.390083 | 29 -> 22 -> 3 |
 
 Both rows are non-decreasing by NB301 surrogate accuracy, and the final full
 proxy-pool result is higher than the final 3-proxy result.
@@ -86,8 +86,8 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr | component correction scale |
 |---|---:|---:|---:|---:|---:|
-| full proxy pool | 50 | 105 | 1.00 | 0.10 | 2.00 |
-| 3-proxy subset | 10 | 50 | 1.00 | 0.10 | 2.00 |
+| full proxy pool | 50 | 100 | 1.00 | 0.10 | 2.00 |
+| 3-proxy subset | 10 | 40 | 1.00 | 0.10 | 2.00 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
 and seed `9000`.
