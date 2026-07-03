@@ -9,7 +9,8 @@ NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-${NAS_RUNTIME_ROOT%/ZeroCo
 SCORE_PY="${SCORE_PY:-${PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro/bin/python}}"
 REFINEMENT_PY="${REFINEMENT_PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
 SCORE_LD_LIBRARY_PATH="${SCORE_LD_LIBRARY_PATH:-}"
-REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-}"
+REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/usr/local/cuda-11.7/lib64}"
+ISOLATED_SCORE_METHODS="${ISOLATED_SCORE_METHODS:-zico swap}"
 OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main}"
 LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
 OP_SCORE_ROOT="${OP_SCORE_ROOT:-${OUT_ROOT}/operation_scores}"
@@ -27,9 +28,9 @@ SEED="${SEED:-9000}"
 
 mkdir -p "$OUT_ROOT" "$LOG_ROOT" "$OP_SCORE_ROOT"
 export CUDA_VISIBLE_DEVICES="$GPU"
-export FIXED_ARCH_FILE
-export NAS_RUNTIME_PACKAGE_ROOT
-export PROXYDIFF_NAS_DEP_ROOT="${PROXYDIFF_NAS_DEP_ROOT:-${REPRO}}"
+if [[ -n "${PROXYDIFF_NAS_DEP_ROOT:-}" ]]; then
+  export PROXYDIFF_NAS_DEP_ROOT
+fi
 
 run_with_optional_ld() {
   local ld_path="$1"
@@ -38,6 +39,20 @@ run_with_optional_ld() {
     LD_LIBRARY_PATH="$ld_path:${LD_LIBRARY_PATH:-}" "$@"
   else
     "$@"
+  fi
+}
+
+run_score_command() {
+  local method="$1"
+  shift
+  if [[ " ${ISOLATED_SCORE_METHODS} " == *" ${method} "* ]]; then
+    if [[ -n "$SCORE_LD_LIBRARY_PATH" ]]; then
+      env -u NAS_RUNTIME_PACKAGE_ROOT -u FIXED_ARCH_FILE LD_LIBRARY_PATH="$SCORE_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" "$@"
+    else
+      env -u NAS_RUNTIME_PACKAGE_ROOT -u FIXED_ARCH_FILE "$@"
+    fi
+  else
+    run_with_optional_ld "$SCORE_LD_LIBRARY_PATH" "$@"
   fi
 }
 
@@ -73,7 +88,7 @@ run_proxy_score() {
     return
   fi
   echo "===== operation score $method START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
-  run_with_optional_ld "$SCORE_LD_LIBRARY_PATH" "$SCORE_PY" "$NAS_SRC_DIR/run_nb301_zcpt_operation_scores.py" \
+  run_score_command "$method" "$SCORE_PY" "$NAS_SRC_DIR/run_nb301_zcpt_operation_scores.py" \
     --method "$method" \
     --arch-file "$FIXED_ARCH_FILE" \
     --out-dir "$out" \
@@ -85,6 +100,14 @@ run_proxy_score() {
     > "$log" 2>&1
   echo "===== operation score $method DONE $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
 }
+
+for method in $ISOLATED_SCORE_METHODS; do
+  if [[ "$method" == "near" ]]; then
+    run_proxy_score "$method" 8
+  else
+    run_proxy_score "$method" 64
+  fi
+done
 
 for method in $PROXY_METHODS; do
   if [[ "$method" == "near" ]]; then
@@ -100,6 +123,8 @@ if [[ "${STOP_AFTER_OPERATION_SCORES:-0}" == "1" ]]; then
 fi
 
 echo "===== build ProxyDiff NB301 caches $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
+export FIXED_ARCH_FILE
+export NAS_RUNTIME_PACKAGE_ROOT
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/proxydiff_nas.py" \
   --op-root "$OP_SCORE_ROOT" \
   --out-dir "$OUT_ROOT/caches" \
@@ -177,8 +202,8 @@ PY
   cd "$REPRO"
 }
 
-run_refinement full_proxy_pool full_proxy_pool 50 100 1.00 0.10 2.00
-run_refinement three_proxy_subset three_proxy_subset 10 40 1.00 0.10 2.00
+run_refinement full_proxy_pool full_proxy_pool 50 105 1.00 0.10 2.00
+run_refinement three_proxy_subset three_proxy_subset 10 50 1.00 0.10 2.00
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \

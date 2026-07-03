@@ -145,6 +145,23 @@ def configure_reproducible_backend(method: str) -> None:
         torch.backends.cuda.matmul.allow_tf32 = env_flag("PROXYDIFF_TORCH_MATMUL_TF32", True)
 
 
+def capture_rng_state():
+    return {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch_cpu": torch.get_rng_state(),
+        "torch_cuda": torch.cuda.get_rng_state() if torch.cuda.is_available() else None,
+    }
+
+
+def restore_rng_state(state) -> None:
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+    torch.set_rng_state(state["torch_cpu"])
+    if state["torch_cuda"] is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state(state["torch_cuda"])
+
+
 def average_ranks(values):
     order = sorted(range(len(values)), key=lambda i: values[i])
     ranks = np.empty(len(values), dtype=float)
@@ -1771,7 +1788,9 @@ def make_zcpt_model_scorer(
         from foresight.pruners.measures.l2_norm import get_l2_norm_array
 
         train_queue = zcpt_cifar_loader(data_root, batch_size=batch_size, seed=seed)
-        inputs, targets = first_batch(train_queue, device)
+        inputs = targets = None
+        if method in {"l2_norm", "meco"}:
+            inputs, targets = first_batch(train_queue, device)
 
         def score(model: nn.Module) -> float:
             model.train()
@@ -2216,6 +2235,9 @@ def score_zcpt_operation_ablation(
         near_repetitions=near_repetitions,
         epsinas_weights=epsinas_weights,
     )
+    score_rng_state = capture_rng_state() if method == "swap" else None
+    if method == "swap":
+        restore_rng_state(score_rng_state)
     baseline_model = make_projected_model(seed, device)
     baseline_score = score_model(baseline_model)
     del baseline_model
@@ -2226,6 +2248,8 @@ def score_zcpt_operation_ablation(
     for cell_type in ("normal", "reduce"):
         for eid in range(14):
             for opid, op_name in enumerate(SWAP_PRIMITIVES):
+                if method == "swap":
+                    restore_rng_state(score_rng_state)
                 model = make_projected_model(seed, device)
                 ablate_single_projected_op(model, cell_type, eid, opid)
                 ablated_score = score_model(model)
@@ -2402,4 +2426,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
