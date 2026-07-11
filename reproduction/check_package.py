@@ -37,7 +37,20 @@ REQUIRED_FILES = [
     "nas_reported/run_nb301_reported_analysis.sh",
     "nas_reported/run_nb301_component_ablation.sh",
     "nas_reported/summarize_nb301_reported_results.py",
+    "nas_reported/search_nb301_operation_score_fusion.py",
+    "nas_reported/run_nb301_main_control_search.sh",
+    "nas_reported/run_nb301_subset_control_search.sh",
+    "nas_reported/evaluate_nb301_balanced_pools.py",
+    "nas_reported/build_nb301_main_table_rows.py",
+    "nas_reported/summarize_nb301_runtime.py",
+    "nas_reported/summarize_nb301_subset_comparison.py",
     "nas_reported/evidence/nb301_reported_results_summary.csv",
+    "nas_reported/evidence/nb301_current_balanced_pool_results.csv",
+    "nas_reported/evidence/nb301_current_balanced_pool_results.json",
+    "nas_reported/evidence/nb301_current_main_results.csv",
+    "nas_reported/evidence/nb301_current_subset_summary.csv",
+    "nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json",
+    "nas_reported/evidence/balanced_pools/balanced3x1000_splits.json",
 ]
 
 PUBLIC_FILES = [

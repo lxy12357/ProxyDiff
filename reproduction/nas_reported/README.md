@@ -65,6 +65,75 @@ OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_subset_stability \
 bash reproduction/nas_v2/scripts/run_nb301_v2_subset_stability.sh 0
 ```
 
+For the current paper configuration, use the same rounded refinement schedule
+for every controlled subset:
+
+```bash
+OP_SCORE_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
+OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_subset_current_method \
+REDUCED_AXIS_STEPS=30 REDUCED_TOTAL_STEPS=80 REDUCED_RESIDUAL_SCALE=0.75 \
+RETAINED_K5_AXIS_STEPS=30 RETAINED_K5_TOTAL_STEPS=80 RETAINED_K5_RESIDUAL_SCALE=0.75 \
+COMPONENT_CORRECTION_LR=0.10 COMPONENT_CORRECTION_SCALE=1.00 \
+OPERATION_TOPK_COUNT=5 SEED=9000 PROXYDIFF_FIXED_SAMPLER_SEED=9000 \
+bash reproduction/nas_v2/scripts/run_nb301_v2_subset_stability.sh 0
+```
+
+## Paired Aggregation Controls
+
+Run AZ-style log-rank and rank-mean evolution with the same proxy sets used by
+the main ProxyDiff rows:
+
+```bash
+OPERATION_SCORE_ROOT=/path/to/operation_scores \
+OUTPUT_ROOT=/path/to/nb301_main_controls \
+bash reproduction/nas_reported/run_nb301_main_control_search.sh
+```
+
+For the 12 fixed subset-stability sets:
+
+```bash
+OPERATION_SCORE_ROOT=/path/to/operation_scores \
+OUTPUT_ROOT=/path/to/nb301_subset_controls \
+bash reproduction/nas_reported/run_nb301_subset_control_search.sh
+```
+
+Both launchers use seed `9000`, population size `50`, parent count `10`, five
+generations, 25 crossover children, and 25 mutation children. The search code
+is CPU-only by default because operation scores are already computed.
+
+## Balanced-Pool Readout
+
+The bundled reference artifacts are the exact three balanced pools used for
+all NB301 main-table search rows:
+
+```text
+evidence/balanced_pools/nb301_stratified3000_pool.json
+SHA-256 7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358
+
+evidence/balanced_pools/balanced3x1000_splits.json
+SHA-256 2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624
+```
+
+The reference-pool wrapper has neutral public metadata, while its ordered
+`records` payload is unchanged from the original baseline artifact. The
+canonical JSON hash of that payload is
+`35dc489b5aa30773c98ca3d11a4807c79307083c062e5983bb2baf07cf8694d0`.
+The split file is byte-identical to the original artifact. It partitions the
+same 3000 records into three disjoint 1000-architecture pools using the frozen
+split seed `20260614`; no pool is resampled for a new method.
+
+Map any final search result to those fixed pools with:
+
+```bash
+python reproduction/nas_reported/evaluate_nb301_balanced_pools.py \
+  --reference-pool reproduction/nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json \
+  --balanced-splits reproduction/nas_reported/evidence/balanced_pools/balanced3x1000_splits.json \
+  --result full_proxy_pool=/path/to/full_proxy_pool_free_decode.json \
+  --result three_proxy_subset=/path/to/three_proxy_subset_free_decode.json \
+  --output-json /path/to/balanced_pool_results.json \
+  --output-csv /path/to/balanced_pool_results.csv
+```
+
 ## Combined Summary
 
 Summarize newly generated artifacts:
@@ -81,3 +150,10 @@ python reproduction/nas_reported/summarize_nb301_reported_results.py \
 
 Running the summarizer without artifact arguments prints the compact bundled
 evidence table.
+
+The current clean main-table and fixed-subset summaries are bundled as:
+
+```text
+evidence/nb301_current_main_results.csv
+evidence/nb301_current_subset_summary.csv
+```

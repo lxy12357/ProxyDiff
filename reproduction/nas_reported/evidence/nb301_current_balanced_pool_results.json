@@ -1,0 +1,29 @@
+{
+  "balanced_splits": "reproduction\\nas_reported\\evidence\\balanced_pools\\balanced3x1000_splits.json",
+  "balanced_splits_sha256": "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624",
+  "definition": "rank each searched architecture accuracy against the three fixed balanced1000 pools",
+  "reference_pool": "reproduction\\nas_reported\\evidence\\balanced_pools\\nb301_stratified3000_pool.json",
+  "reference_pool_sha256": "7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358",
+  "rows": [
+    {
+      "average_rank": 1.3333333333333333,
+      "balanced1000_a_rank": 2,
+      "balanced1000_b_rank": 1,
+      "balanced1000_c_rank": 1,
+      "label": "full_proxy_pool",
+      "selected_accuracy": 94.59962463378906,
+      "source_result": "run_output/full_proxy_pool_free_decode.json"
+    },
+    {
+      "average_rank": 1.3333333333333333,
+      "balanced1000_a_rank": 2,
+      "balanced1000_b_rank": 1,
+      "balanced1000_c_rank": 1,
+      "label": "three_proxy_subset",
+      "selected_accuracy": 94.54334259033203,
+      "source_result": "run_output/three_proxy_subset_free_decode.json"
+    }
+  ],
+  "split_protocol_revision": "stratified3000_nb301_internalrank_balanced3x1000_readout_v1_20260615",
+  "split_seed": 20260614
+}

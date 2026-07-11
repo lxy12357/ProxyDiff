@@ -1,0 +1,3 @@
+label,selected_accuracy,balanced1000_a_rank,balanced1000_b_rank,balanced1000_c_rank,average_rank,source_result
+full_proxy_pool,94.59962463378906,2,1,1,1.3333333333333333,run_output/full_proxy_pool_free_decode.json
+three_proxy_subset,94.54334259033203,2,1,1,1.3333333333333333,run_output/three_proxy_subset_free_decode.json
