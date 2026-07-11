@@ -7,12 +7,13 @@ Fresh-score outputs verified on the hdd GPU0 environment:
 
 | row | score prior | axis-calibrated selection | component-corrected refinement | rank path |
 |---|---:|---:|---:|---|
-| full proxy pool | 93.723389 | 94.349678 | 94.587448 | 180 -> 5 -> 1 |
-| 3-proxy subset | 94.113464 | 94.361801 | 94.462784 | 32 -> 5 -> 2 |
+| full proxy pool | 93.797127 | 94.559105 | 94.599625 | 144 -> 1 -> 1 |
+| 3-proxy subset | 94.197647 | 94.543343 | 94.543343 | 16 -> 1 -> 1 |
 
-Both rows are non-decreasing by NB301 surrogate accuracy, and the final full
-proxy-pool result is higher than the final 3-proxy result.
-The 3-proxy subset uses `jacob`, `l2_norm`, and `grad_norm`.
+The full-pool row improves strictly at both refinement stages, the 3-proxy row
+is non-decreasing, and the final full-pool result is higher than the final
+3-proxy result.
+The 3-proxy subset uses `jacob`, `near`, and `plain`.
 
 ## Pipeline
 
@@ -33,6 +34,7 @@ The default hdd paths are:
 REPRO=/hdd/xiaoyun/ProxyDARTS/Reproduction
 NAS_RUNTIME_ROOT=/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime/ZeroCostNAS
 SCORE_PY=/hdd/xiaoyun/conda_envs/proxydarts-repro/bin/python
+ZICO_SCORE_PY=/hdd/xiaoyun/conda_envs/proxydiff-nas-zico/bin/python
 REFINEMENT_PY=/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python
 OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main
 ```
@@ -47,6 +49,7 @@ Override them only when rebuilding the environment:
 REPRO=/path/to/reproduction/root \
 NAS_RUNTIME_ROOT=/path/to/nas_runtime/ZeroCostNAS \
 SCORE_PY=/path/to/score/python \
+ZICO_SCORE_PY=/path/to/proxydiff-nas-zico/bin/python \
 REFINEMENT_PY=/path/to/refinement/python \
 OUT_ROOT=/path/to/output \
 bash reproduction/nas_v2/scripts/run_nb301_v2_pipeline.sh 0
@@ -87,11 +90,25 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr | component correction scale |
 |---|---:|---:|---:|---:|---:|
-| full proxy pool | 50 | 105 | 1.00 | 0.10 | 2.00 |
-| 3-proxy subset | 10 | 50 | 1.00 | 0.10 | 2.00 |
+| full proxy pool | 30 | 80 | 1.00 | 0.10 | 1.00 |
+| 3-proxy subset | 30 | 80 | 0.75 | 0.10 | 1.00 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
-and seed `9000`.
+and seed `9000`. The refinement sampler is also fixed to `9000`.
+
+ZiCo operation scores use the pinned CUDA runtime in `environment-zico.yml`.
+Create that environment before running the complete score stage:
+
+```bash
+conda env create \
+  --prefix /hdd/xiaoyun/conda_envs/proxydiff-nas-zico \
+  -f reproduction/nas_v2/environment-zico.yml
+```
+
+The launcher applies the deterministic CUDA and cuDNN settings required by this
+runtime automatically. The external Zero-Cost-PT source tree is read from
+`REPRO` by default; set `PROXYDIFF_NAS_DEP_ROOT` when that source tree is stored
+elsewhere.
 
 Summarize a completed run:
 
@@ -101,7 +118,7 @@ python reproduction/nas_v2/src/summarize_nb301_v2_results.py \
   --out_csv /hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/nb301_v2_summary.csv
 ```
 
-Summarize the reproduced NB301 analysis values:
+Summarize the reproduced NB301 main and subset values:
 
 ```bash
 python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
@@ -120,6 +137,7 @@ python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
 - `src/compute_nb301_zcpt_operation_scores.py`: NB301 ZCPT operation-ablation
   score computation. `src/run_nb301_zcpt_operation_scores.py` is the stable
   launcher used by the shell pipeline.
+- `src/verify_zico_runtime.py`: pinned ZiCo CUDA runtime check.
 - `src/proxydiff_nas.py`: proxy score alignment, factorization, and cache
   writer.
 - `src/run_nb301_proxy_refinement.py`: clean wrapper around the NB301
@@ -129,10 +147,11 @@ python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
   evaluation.
 - `src/summarize_nb301_v2_results.py`: deterministic parser for v2 output
   directories.
-- `src/summarize_nb301_v2_reported_results.py`: compact summary of NB301
-  analysis values reproduced by the v2 package.
+- `src/summarize_nb301_v2_reported_results.py`: compact summary of NB301 main,
+  trajectory, and subset values reproduced by the v2 package.
 - `src/summarize_nb301_v2_subset_results.py`: fixed-subset stability parser.
 - `configs/`: refinement config template.
+- `environment-zico.yml`: pinned deterministic ZiCo score runtime.
 
 The external hdd runtime supplies NB301, DARTS search-space code, Zero-Cost-PT
 dependencies, surrogate model assets, and the fixed architecture pool.

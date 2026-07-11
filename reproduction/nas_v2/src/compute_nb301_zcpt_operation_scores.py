@@ -141,8 +141,15 @@ def configure_reproducible_backend(method: str) -> None:
     _ = method
     torch.backends.cudnn.benchmark = env_flag("PROXYDIFF_CUDNN_BENCHMARK", True)
     torch.backends.cudnn.deterministic = env_flag("PROXYDIFF_CUDNN_DETERMINISTIC", False)
+    if hasattr(torch.backends, "cudnn") and hasattr(torch.backends.cudnn, "allow_tf32"):
+        torch.backends.cudnn.allow_tf32 = env_flag("PROXYDIFF_CUDNN_ALLOW_TF32", True)
     if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
         torch.backends.cuda.matmul.allow_tf32 = env_flag("PROXYDIFF_TORCH_MATMUL_TF32", True)
+    if env_flag("PROXYDIFF_TORCH_DETERMINISTIC_ALGOS", False):
+        try:
+            torch.use_deterministic_algorithms(True, warn_only=True)
+        except TypeError:
+            torch.use_deterministic_algorithms(True)
 
 
 def capture_rng_state():

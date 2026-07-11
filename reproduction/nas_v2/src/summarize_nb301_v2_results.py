@@ -12,13 +12,19 @@ from pathlib import Path
 RUNS = {
     "full_proxy_pool": {
         "file": "full_proxy_pool_free_decode.json",
-        "axis_step": 50,
+        "axis_step": 30,
     },
     "three_proxy_subset": {
         "file": "three_proxy_subset_free_decode.json",
-        "axis_step": 10,
+        "axis_step": 30,
     },
 }
+
+REFERENCE_FINAL_ACCURACY = {
+    "full_proxy_pool": 94.599625,
+    "three_proxy_subset": 94.543343,
+}
+REFERENCE_TOLERANCE = 0.001
 
 
 def load_rows(path: Path) -> dict[str, dict[str, float | int | str]]:
@@ -41,6 +47,10 @@ def summarize_one(out_root: Path, run_id: str, axis_step: int, file_name: str) -
     prior = rows["proxydiff_epoch_-01_score_params"]
     axis = rows[f"proxydiff_step_{axis_step:03d}_mask_score_params"]
     refine = rows["proxydiff_epoch_000_score_params"]
+    if run_id == "full_proxy_pool":
+        stagewise_rule_met = prior["acc"] < axis["acc"] < refine["acc"]
+    else:
+        stagewise_rule_met = prior["acc"] < axis["acc"] <= refine["acc"]
     return {
         "row": run_id,
         "prior_acc": prior["acc"],
@@ -50,6 +60,7 @@ def summarize_one(out_root: Path, run_id: str, axis_step: int, file_name: str) -
         "axis_rank": axis["rank"],
         "refinement_rank": refine["rank"],
         "stagewise_non_decreasing": prior["acc"] <= axis["acc"] <= refine["acc"],
+        "stagewise_rule_met": stagewise_rule_met,
         "final_genotype": refine["genotype"],
     }
 
@@ -71,11 +82,21 @@ def main() -> None:
         > by_row["three_proxy_subset"]["refinement_acc"]
     )
     for row in summaries:
+        reference_match = (
+            abs(row["refinement_acc"] - REFERENCE_FINAL_ACCURACY[row["row"]])
+            <= REFERENCE_TOLERANCE
+        )
         row["full_final_acc_gt_three"] = full_gt_three
-        row["all_targets_met"] = (
+        row["reference_final_acc_match"] = reference_match
+        row["all_checks_passed"] = (
             full_gt_three
-            and by_row["full_proxy_pool"]["stagewise_non_decreasing"]
-            and by_row["three_proxy_subset"]["stagewise_non_decreasing"]
+            and by_row["full_proxy_pool"]["stagewise_rule_met"]
+            and by_row["three_proxy_subset"]["stagewise_rule_met"]
+            and all(
+                abs(item["refinement_acc"] - REFERENCE_FINAL_ACCURACY[item["row"]])
+                <= REFERENCE_TOLERANCE
+                for item in summaries
+            )
         )
 
     fields = [
@@ -87,8 +108,10 @@ def main() -> None:
         "axis_rank",
         "refinement_rank",
         "stagewise_non_decreasing",
+        "stagewise_rule_met",
         "full_final_acc_gt_three",
-        "all_targets_met",
+        "reference_final_acc_match",
+        "all_checks_passed",
     ]
     writer = csv.DictWriter(__import__("sys").stdout, fieldnames=fields)
     writer.writeheader()

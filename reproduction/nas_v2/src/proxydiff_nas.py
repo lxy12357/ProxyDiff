@@ -23,7 +23,7 @@ import numpy as np
 import torch
 
 
-ALL_19_PROXIES = [
+FULL_PROXY_POOL = [
     "epe_nas",
     "epsinas",
     "eznas_darts",
@@ -45,7 +45,7 @@ ALL_19_PROXIES = [
     "zico",
 ]
 
-FINAL_8_PROXIES = [
+REFERENCE_RETAINED_PROXIES = [
     "nwot",
     "meco",
     "swap",
@@ -56,7 +56,7 @@ FINAL_8_PROXIES = [
     "zico",
 ]
 
-FINAL_3_PROXIES = ["jacob", "l2_norm", "grad_norm"]
+REDUCED_PROXY_SET = ["jacob", "near", "plain"]
 
 AXIS_ORIENTATION_PROXIES = [
     "zcpt_jacob",
@@ -461,7 +461,7 @@ def main() -> None:
                 args.op_root,
                 args.out_dir,
                 "full_proxy_pool",
-                ALL_19_PROXIES,
+                FULL_PROXY_POOL,
                 apply_gate=True,
                 cache_layout="readout_axes",
                 cache_device=cache_device,
@@ -473,7 +473,7 @@ def main() -> None:
                 args.op_root,
                 args.out_dir,
                 "utility_gated_pool",
-                FINAL_8_PROXIES,
+                REFERENCE_RETAINED_PROXIES,
                 apply_gate=False,
                 cache_layout="prior_axes",
                 cache_device=cache_device,
@@ -485,7 +485,7 @@ def main() -> None:
                 args.op_root,
                 args.out_dir,
                 "three_proxy_subset",
-                FINAL_3_PROXIES,
+                REDUCED_PROXY_SET,
                 apply_gate=False,
                 cache_layout="readout_prior_axes",
                 cache_device=cache_device,

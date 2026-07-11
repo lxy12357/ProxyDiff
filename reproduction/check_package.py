@@ -18,6 +18,7 @@ REQUIRED_FILES = [
     "nas_v2/scripts/resume_nb301_scores.sh",
     "nas_v2/src/compute_nb301_zcpt_operation_scores.py",
     "nas_v2/src/run_nb301_zcpt_operation_scores.py",
+    "nas_v2/src/verify_zico_runtime.py",
     "nas_v2/src/proxydiff_nas.py",
     "nas_v2/src/run_nb301_proxy_refinement.py",
     "nas_v2/src/_proxydiff_nb301_refinement_impl.py",
@@ -27,13 +28,22 @@ REQUIRED_FILES = [
     "nas_v2/src/summarize_nb301_v2_reported_results.py",
     "nas_v2/src/summarize_nb301_v2_subset_results.py",
     "nas_v2/configs/nb301_proxy_refinement.yaml",
+    "nas_v2/environment-zico.yml",
     "nas_v2/evidence/nb301_v2_reported_results_summary.csv",
+    "nas_reported/README.md",
+    "nas_reported/build_nb301_component_ablation.py",
+    "nas_reported/analyze_nb301_proxy_geometry.py",
+    "nas_reported/extract_nb301_axis_calibration.py",
+    "nas_reported/run_nb301_reported_analysis.sh",
+    "nas_reported/run_nb301_component_ablation.sh",
+    "nas_reported/summarize_nb301_reported_results.py",
+    "nas_reported/evidence/nb301_reported_results_summary.csv",
 ]
 
 PUBLIC_FILES = [
     path
     for path in REQUIRED_FILES
-    if path == "README.md" or path.startswith("nas_v2/")
+    if path == "README.md" or path.startswith("nas_v2/") or path.startswith("nas_reported/")
 ]
 
 

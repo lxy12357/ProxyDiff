@@ -7,9 +7,11 @@ REPRO="${REPRO:-/hdd/xiaoyun/ProxyDARTS/Reproduction}"
 NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-${REPRO}/nas_runtime/ZeroCostNAS}"
 NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-${NAS_RUNTIME_ROOT%/ZeroCostNAS}}"
 SCORE_PY="${SCORE_PY:-${PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro/bin/python}}"
+ZICO_SCORE_PY="${ZICO_SCORE_PY:-/hdd/xiaoyun/conda_envs/proxydiff-nas-zico/bin/python}"
 REFINEMENT_PY="${REFINEMENT_PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
 SCORE_LD_LIBRARY_PATH="${SCORE_LD_LIBRARY_PATH:-}"
-REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/usr/local/cuda-11.7/lib64}"
+ZICO_SCORE_LD_LIBRARY_PATH="${ZICO_SCORE_LD_LIBRARY_PATH:-}"
+REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/lib:/usr/local/cuda-11.7/lib64:/usr/local/cuda-11.7/targets/x86_64-linux/lib}"
 ISOLATED_SCORE_METHODS="${ISOLATED_SCORE_METHODS:-zico swap}"
 OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main}"
 LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
@@ -25,6 +27,11 @@ PROXY_METHODS="${PROXY_METHODS:-epe_nas epsinas eznas_darts fisher grad_norm gra
 INIT_CHANNELS="${INIT_CHANNELS:-16}"
 LAYERS="${LAYERS:-8}"
 SEED="${SEED:-9000}"
+
+if [[ "$SEED" != "9000" ]]; then
+  echo "NB301 reproduction requires SEED=9000" >&2
+  exit 2
+fi
 
 mkdir -p "$OUT_ROOT" "$LOG_ROOT" "$OP_SCORE_ROOT"
 export CUDA_VISIBLE_DEVICES="$GPU"
@@ -45,7 +52,34 @@ run_with_optional_ld() {
 run_score_command() {
   local method="$1"
   shift
-  if [[ " ${ISOLATED_SCORE_METHODS} " == *" ${method} "* ]]; then
+  if [[ "$method" == "zico" ]]; then
+    if [[ -n "$ZICO_SCORE_LD_LIBRARY_PATH" ]]; then
+      env -u NAS_RUNTIME_PACKAGE_ROOT -u FIXED_ARCH_FILE -u NVIDIA_TF32_OVERRIDE \
+        PYTHONHASHSEED=0 \
+        CUDA_DEVICE_MAX_CONNECTIONS=1 \
+        CUDA_LAUNCH_BLOCKING=1 \
+        CUBLAS_WORKSPACE_CONFIG=:4096:8 \
+        PROXYDIFF_CUDNN_BENCHMARK=0 \
+        PROXYDIFF_CUDNN_DETERMINISTIC=1 \
+        PROXYDIFF_CUDNN_ALLOW_TF32=1 \
+        PROXYDIFF_TORCH_MATMUL_TF32=0 \
+        PROXYDIFF_TORCH_DETERMINISTIC_ALGOS=1 \
+        LD_LIBRARY_PATH="$ZICO_SCORE_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" \
+        "$@"
+    else
+      env -u NAS_RUNTIME_PACKAGE_ROOT -u FIXED_ARCH_FILE -u NVIDIA_TF32_OVERRIDE \
+        PYTHONHASHSEED=0 \
+        CUDA_DEVICE_MAX_CONNECTIONS=1 \
+        CUDA_LAUNCH_BLOCKING=1 \
+        CUBLAS_WORKSPACE_CONFIG=:4096:8 \
+        PROXYDIFF_CUDNN_BENCHMARK=0 \
+        PROXYDIFF_CUDNN_DETERMINISTIC=1 \
+        PROXYDIFF_CUDNN_ALLOW_TF32=1 \
+        PROXYDIFF_TORCH_MATMUL_TF32=0 \
+        PROXYDIFF_TORCH_DETERMINISTIC_ALGOS=1 \
+        "$@"
+    fi
+  elif [[ " ${ISOLATED_SCORE_METHODS} " == *" ${method} "* ]]; then
     if [[ -n "$SCORE_LD_LIBRARY_PATH" ]]; then
       env -u NAS_RUNTIME_PACKAGE_ROOT -u FIXED_ARCH_FILE LD_LIBRARY_PATH="$SCORE_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" "$@"
     else
@@ -54,6 +88,15 @@ run_score_command() {
   else
     run_with_optional_ld "$SCORE_LD_LIBRARY_PATH" "$@"
   fi
+}
+
+ZICO_RUNTIME_VERIFIED=0
+verify_zico_runtime() {
+  if [[ "$ZICO_RUNTIME_VERIFIED" == "1" ]]; then
+    return
+  fi
+  "$ZICO_SCORE_PY" "$NAS_SRC_DIR/verify_zico_runtime.py"
+  ZICO_RUNTIME_VERIFIED=1
 }
 
 copy_refinement_artifacts() {
@@ -73,6 +116,7 @@ echo "gpu=$GPU" | tee -a "$LOG_ROOT/master.log"
 echo "seed=$SEED" | tee -a "$LOG_ROOT/master.log"
 echo "out_root=$OUT_ROOT" | tee -a "$LOG_ROOT/master.log"
 echo "score_python=$SCORE_PY" | tee -a "$LOG_ROOT/master.log"
+echo "zico_score_python=$ZICO_SCORE_PY" | tee -a "$LOG_ROOT/master.log"
 echo "refinement_python=$REFINEMENT_PY" | tee -a "$LOG_ROOT/master.log"
 
 cd "$REPRO"
@@ -83,12 +127,19 @@ run_proxy_score() {
   local out="$OP_SCORE_ROOT/nb301_zcpt_${method}"
   local official_out="$OP_SCORE_ROOT/nb301_official_zcpt_${method}"
   local log="$LOG_ROOT/score_${method}.log"
+  local score_python="$SCORE_PY"
+  if [[ "$method" == "zico" ]]; then
+    score_python="$ZICO_SCORE_PY"
+  fi
   if [[ -f "$out/operation_scores.json" || -f "$official_out/operation_scores.json" ]]; then
     echo "skip existing operation score: $method" | tee -a "$LOG_ROOT/master.log"
     return
   fi
+  if [[ "$method" == "zico" ]]; then
+    verify_zico_runtime
+  fi
   echo "===== operation score $method START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
-  run_score_command "$method" "$SCORE_PY" "$NAS_SRC_DIR/run_nb301_zcpt_operation_scores.py" \
+  run_score_command "$method" "$score_python" "$NAS_SRC_DIR/run_nb301_zcpt_operation_scores.py" \
     --method "$method" \
     --arch-file "$FIXED_ARCH_FILE" \
     --out-dir "$out" \
@@ -172,7 +223,7 @@ run_refinement() {
   export DISABLE_EDGE_NORMALIZATION=true
   export EVALUATE_DECODE_VARIANTS=1
   export PROXYDIFF_DETERMINISTIC_REFINEMENT=1
-  export PROXYDIFF_FIXED_SAMPLER_SEED=off
+  export PROXYDIFF_FIXED_SAMPLER_SEED="$SEED"
 
   echo "===== refine $run_label START $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
   run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/run_nb301_proxy_refinement.py" --config-file "$cfg" > "$log" 2>&1
@@ -202,8 +253,8 @@ PY
   cd "$REPRO"
 }
 
-run_refinement full_proxy_pool full_proxy_pool 50 105 1.00 0.10 2.00
-run_refinement three_proxy_subset three_proxy_subset 10 50 1.00 0.10 2.00
+run_refinement full_proxy_pool full_proxy_pool 30 80 1.00 0.10 1.00
+run_refinement three_proxy_subset three_proxy_subset 30 80 0.75 0.10 1.00
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \

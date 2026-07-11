@@ -5,15 +5,17 @@ component selection.
 
 ## Reproduction Code
 
-The current public reproduction package contains the NB301 NAS pipeline and the
-NAS v2 analysis-value summary:
+The current public reproduction package contains the NB301 NAS pipeline and
+clean analysis code:
 
 ```text
 reproduction/nas_v2/
+reproduction/nas_reported/
 ```
 
 See `reproduction/nas_v2/README.md` for the end-to-end score, cache,
-refinement, and evaluation commands.
+refinement, and evaluation commands. See `reproduction/nas_reported/README.md`
+for component, geometry, calibration, and subset analyses.
 
 Check the public reproduction package layout:
 

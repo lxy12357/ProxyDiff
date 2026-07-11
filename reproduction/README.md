@@ -5,6 +5,8 @@ This directory contains the cleaned reproduction code for the ProxyDiff paper.
 The current package is organized for the NAS reproduction path:
 
 - `nas_v2/`: NAS-Bench-301 operation scoring and ProxyDiff refinement.
+- `nas_reported/`: NB301 component, geometry, axis-calibration, trajectory, and
+  subset analysis.
 
 The scripts are designed to run in the hdd experiment environment used for the paper. Paths can be overridden through environment variables in each launcher.
 
