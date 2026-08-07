@@ -112,6 +112,30 @@ is CPU-only by default because operation scores are already computed.
 The current paired main controls use `fisher,jacob,synflow` for the budgeted
 row and the admitted nine-proxy full set for the full row.
 
+## Main-Table Rows
+
+Rebuild the four current NAS main-table rows directly from the bundled frozen
+balanced-pool and runtime evidence:
+
+```bash
+python reproduction/nas_reported/build_nb301_main_table_rows.py \
+  --balanced-pool-csv reproduction/nas_reported/evidence/nb301_current_balanced_pool_results.csv \
+  --runtime-csv reproduction/nas_reported/evidence/nb301_current_runtime.csv \
+  --output-json /path/to/nb301_main_table_rows.json
+```
+
+For a newly completed score-to-result run, regenerate the runtime evidence
+from the clean master logs:
+
+```bash
+python reproduction/nas_reported/summarize_nb301_runtime.py \
+  --score-master-log /path/to/score_master.log \
+  --full-refinement-master-log /path/to/full_refinement_master.log \
+  --three-refinement-master-log /path/to/three_refinement_master.log \
+  --output-csv /path/to/nb301_runtime.csv \
+  --output-json /path/to/nb301_runtime.json
+```
+
 ## Balanced-Pool Readout
 
 The bundled reference artifacts are the exact three balanced pools used for
@@ -166,5 +190,6 @@ The current clean main-table and fixed-subset summaries are bundled as:
 
 ```text
 evidence/nb301_current_main_results.csv
+evidence/nb301_current_runtime.csv
 evidence/nb301_current_subset_summary.csv
 ```

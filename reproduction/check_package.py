@@ -51,6 +51,7 @@ REQUIRED_FILES = [
     "nas_reported/evidence/nb301_current_balanced_pool_results.csv",
     "nas_reported/evidence/nb301_current_balanced_pool_results.json",
     "nas_reported/evidence/nb301_current_main_results.csv",
+    "nas_reported/evidence/nb301_current_runtime.csv",
     "nas_reported/evidence/nb301_current_subset_summary.csv",
     "nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json",
     "nas_reported/evidence/balanced_pools/balanced3x1000_splits.json",
