@@ -21,8 +21,8 @@ RUNS = {
 }
 
 REFERENCE_FINAL_ACCURACY = {
-    "full_proxy_pool": 94.599625,
-    "three_proxy_subset": 94.543343,
+    "full_proxy_pool": 94.640305,
+    "three_proxy_subset": 94.540970,
 }
 REFERENCE_TOLERANCE = 0.001
 

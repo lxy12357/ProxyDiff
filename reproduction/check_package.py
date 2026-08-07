@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import py_compile
 import tempfile
 from pathlib import Path
@@ -13,6 +14,7 @@ REQUIRED_FILES = [
     "README.md",
     "nas_v2/README.md",
     "nas_v2/scripts/run_nb301_v2_pipeline.sh",
+    "nas_v2/scripts/setup_nb301_score_dependencies.sh",
     "nas_v2/scripts/run_nb301_v2_refine_from_cache.sh",
     "nas_v2/scripts/run_nb301_v2_subset_stability.sh",
     "nas_v2/scripts/resume_nb301_scores.sh",
@@ -28,6 +30,7 @@ REQUIRED_FILES = [
     "nas_v2/src/summarize_nb301_v2_reported_results.py",
     "nas_v2/src/summarize_nb301_v2_subset_results.py",
     "nas_v2/configs/nb301_proxy_refinement.yaml",
+    "nas_v2/assets/arch_dataset_20cell_c36.pt",
     "nas_v2/environment-zico.yml",
     "nas_v2/evidence/nb301_v2_reported_results_summary.csv",
     "nas_reported/README.md",
@@ -59,6 +62,18 @@ PUBLIC_FILES = [
     if path == "README.md" or path.startswith("nas_v2/") or path.startswith("nas_reported/")
 ]
 
+EXPECTED_SHA256 = {
+    "nas_v2/assets/arch_dataset_20cell_c36.pt": (
+        "852c3187ef2645469b52cfb94e9f6fa9e7b1859814f17727f181efe390c16f37"
+    ),
+    "nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json": (
+        "7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358"
+    ),
+    "nas_reported/evidence/balanced_pools/balanced3x1000_splits.json": (
+        "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624"
+    ),
+}
+
 
 def term(*parts: str) -> str:
     return "".join(parts)
@@ -84,6 +99,11 @@ FORBIDDEN_TERMS = [
     term("iot", "j"),
     term("de", "bug"),
     term("diagn", "ostic"),
+    "/hdd/",
+    "Manuscript/",
+    "nas_official_baselines",
+    "fixedpool_",
+    "runner_rank",
 ]
 
 
@@ -143,13 +163,36 @@ def check_python_syntax(root: Path) -> int:
     return 0
 
 
+def check_artifact_hashes(root: Path) -> int:
+    failures = []
+    for rel_path, expected in EXPECTED_SHA256.items():
+        path = root / rel_path
+        if not path.exists():
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            failures.append((rel_path, expected, actual))
+    if failures:
+        print(f"artifact hashes: FAILED {len(failures)}")
+        for rel_path, expected, actual in failures:
+            print(f"  - {rel_path}: expected {expected}, got {actual}")
+        return len(failures)
+    print(f"artifact hashes: OK ({len(EXPECTED_SHA256)} files)")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent)
     args = parser.parse_args()
     root = args.root.resolve()
 
-    failures = check_required(root) + check_public_terms(root) + check_python_syntax(root)
+    failures = (
+        check_required(root)
+        + check_public_terms(root)
+        + check_python_syntax(root)
+        + check_artifact_hashes(root)
+    )
     if failures:
         raise SystemExit(1)
 

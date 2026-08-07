@@ -3,10 +3,10 @@ set -euo pipefail
 
 OPERATION_SCORE_ROOT="${OPERATION_SCORE_ROOT:?set OPERATION_SCORE_ROOT}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?set OUTPUT_ROOT}"
-NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime/ZeroCostNAS}"
-FIXED_ARCHITECTURE_FILE="${FIXED_ARCHITECTURE_FILE:-/hdd/xiaoyun/ProxyDARTS/Reproduction/fixed_archs/arch_dataset_20cell_c36.pt}"
-PYTHON="${PYTHON:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:?set NAS_RUNTIME_ROOT to the clean NB301 runtime directory}"
+FIXED_ARCHITECTURE_FILE="${FIXED_ARCHITECTURE_FILE:-${SCRIPT_DIR}/../nas_v2/assets/arch_dataset_20cell_c36.pt}"
+PYTHON="${PYTHON:-python}"
 SEARCH_SCRIPT="${SCRIPT_DIR}/search_nb301_operation_score_fusion.py"
 mkdir -p "${OUTPUT_ROOT}/logs"
 

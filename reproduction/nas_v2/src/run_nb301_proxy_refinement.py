@@ -10,6 +10,7 @@ import os
 import random
 import shutil
 import sys
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -62,10 +63,12 @@ def install_configspace_normal_bounds_compat() -> None:
 
 install_configspace_normal_bounds_compat()
 
-NAS_RUNTIME_PACKAGE_ROOT = os.environ.get(
-    "NAS_RUNTIME_PACKAGE_ROOT",
-    "/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime",
-)
+NAS_RUNTIME_PACKAGE_ROOT = os.environ.get("NAS_RUNTIME_PACKAGE_ROOT")
+if not NAS_RUNTIME_PACKAGE_ROOT:
+    raise RuntimeError(
+        "NAS_RUNTIME_PACKAGE_ROOT must point to the parent directory of the "
+        "ZeroCostNAS runtime package."
+    )
 sys.path.insert(0, NAS_RUNTIME_PACKAGE_ROOT)
 
 
@@ -299,11 +302,11 @@ enable_deterministic_refinement(config.seed)
 install_fixed_subset_sampler()
 
 if config.search_space == "nasbench301":
-    fixed_arch = (
-        os.environ.get("FIXED_ARCH_FILE")
-        or os.environ.get(evaluator_key("_FIXED_ARCH_FILE"))
-        or "/hdd/xiaoyun/ProxyDARTS/Reproduction/fixed_archs/arch_dataset_20cell_c36.pt"
-    )
+    fixed_arch = os.environ.get("FIXED_ARCH_FILE") or os.environ.get(evaluator_key("_FIXED_ARCH_FILE"))
+    if not fixed_arch:
+        fixed_arch = str(
+            Path(__file__).resolve().parents[1] / "assets" / "arch_dataset_20cell_c36.pt"
+        )
     save_arch_dir = os.path.join(config.save, "arch_data")
     os.makedirs(save_arch_dir, exist_ok=True)
     save_arch = os.path.join(save_arch_dir, "arch_dataset.npy")

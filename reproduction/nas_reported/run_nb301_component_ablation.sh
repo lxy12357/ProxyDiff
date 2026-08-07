@@ -2,20 +2,26 @@
 set -euo pipefail
 
 GPU="${1:-0}"
-REPRO="${REPRO:-/hdd/xiaoyun/ProxyDARTS/Reproduction}"
-OP_SCORE_ROOT="${OP_SCORE_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores}"
-OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_reported_component_ablation}"
-REFINEMENT_PY="${REFINEMENT_PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
-REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/lib:/usr/local/cuda-11.7/lib64:/usr/local/cuda-11.7/targets/x86_64-linux/lib}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPORTED_DIR="$SCRIPT_DIR"
 NAS_V2_DIR="$(cd "$SCRIPT_DIR/../nas_v2" && pwd)"
+OP_SCORE_ROOT="${OP_SCORE_ROOT:-${NAS_V2_DIR}/outputs/nb301_v2_main/operation_scores}"
+OUT_ROOT="${OUT_ROOT:-${NAS_V2_DIR}/outputs/nb301_reported_component_ablation}"
+REFINEMENT_PY="${REFINEMENT_PY:-${PY:-python}}"
+REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-}"
+NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:?set NAS_RUNTIME_ROOT to the clean NB301 runtime directory}"
+NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-$(dirname "$NAS_RUNTIME_ROOT")}"
+FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${NAS_V2_DIR}/assets/arch_dataset_20cell_c36.pt}"
+export NAS_RUNTIME_PACKAGE_ROOT FIXED_ARCH_FILE
 
 mkdir -p "$OUT_ROOT/logs"
 
 run_with_refinement_runtime() {
-  LD_LIBRARY_PATH="$REFINEMENT_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" "$REFINEMENT_PY" "$@"
+  if [[ -n "$REFINEMENT_LD_LIBRARY_PATH" ]]; then
+    LD_LIBRARY_PATH="$REFINEMENT_LD_LIBRARY_PATH:${LD_LIBRARY_PATH:-}" "$REFINEMENT_PY" "$@"
+  else
+    "$REFINEMENT_PY" "$@"
+  fi
 }
 
 run_with_refinement_runtime "$REPORTED_DIR/build_nb301_component_ablation.py" \
@@ -31,7 +37,7 @@ run_with_refinement_runtime "$NAS_V2_DIR/src/reevaluate_free_selected_arch.py" \
 
 OUT_ROOT="$OUT_ROOT/raw_refinement" \
 AXIS_CALIBRATION_STEPS=30 \
-TOTAL_TRAINING_STEPS=80 \
+TOTAL_TRAINING_STEPS=40 \
 RESIDUAL_AXIS_SCALE=1.00 \
 COMPONENT_CORRECTION_LR=0.10 \
 COMPONENT_CORRECTION_SCALE=1.00 \

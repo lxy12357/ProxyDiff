@@ -3,25 +3,25 @@ set -euo pipefail
 
 GPU="${1:-0}"
 
-REPRO="${REPRO:-/hdd/xiaoyun/ProxyDARTS/Reproduction}"
-NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-${REPRO}/nas_runtime/ZeroCostNAS}"
-NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-${NAS_RUNTIME_ROOT%/ZeroCostNAS}}"
-SCORE_PY="${SCORE_PY:-${PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro/bin/python}}"
-ZICO_SCORE_PY="${ZICO_SCORE_PY:-/hdd/xiaoyun/conda_envs/proxydiff-nas-zico/bin/python}"
-REFINEMENT_PY="${REFINEMENT_PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
-SCORE_LD_LIBRARY_PATH="${SCORE_LD_LIBRARY_PATH:-}"
-ZICO_SCORE_LD_LIBRARY_PATH="${ZICO_SCORE_LD_LIBRARY_PATH:-}"
-REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/lib:/usr/local/cuda-11.7/lib64:/usr/local/cuda-11.7/targets/x86_64-linux/lib}"
-ISOLATED_SCORE_METHODS="${ISOLATED_SCORE_METHODS:-zico swap}"
-OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main}"
-LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
-OP_SCORE_ROOT="${OP_SCORE_ROOT:-${OUT_ROOT}/operation_scores}"
-FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${REPRO}/fixed_archs/arch_dataset_20cell_c36.pt}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAS_PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 NAS_SRC_DIR="${NAS_PACKAGE_DIR}/src"
 NAS_CONFIG_DIR="${NAS_PACKAGE_DIR}/configs"
+
+NAS_DEPENDENCY_ROOT="${NAS_DEPENDENCY_ROOT:-${NAS_PACKAGE_DIR}/dependencies}"
+NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-}"
+NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-}"
+SCORE_PY="${SCORE_PY:-${PY:-python}}"
+ZICO_SCORE_PY="${ZICO_SCORE_PY:-$SCORE_PY}"
+REFINEMENT_PY="${REFINEMENT_PY:-${PY:-python}}"
+SCORE_LD_LIBRARY_PATH="${SCORE_LD_LIBRARY_PATH:-}"
+ZICO_SCORE_LD_LIBRARY_PATH="${ZICO_SCORE_LD_LIBRARY_PATH:-}"
+REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-}"
+ISOLATED_SCORE_METHODS="${ISOLATED_SCORE_METHODS:-zico swap}"
+OUT_ROOT="${OUT_ROOT:-${NAS_PACKAGE_DIR}/outputs/nb301_v2_main}"
+LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
+OP_SCORE_ROOT="${OP_SCORE_ROOT:-${OUT_ROOT}/operation_scores}"
+FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${NAS_PACKAGE_DIR}/assets/arch_dataset_20cell_c36.pt}"
 
 PROXY_METHODS="${PROXY_METHODS:-epe_nas epsinas eznas_darts fisher grad_norm grasp jacob jacob_cov l2_norm meco near nwot plain snip swap synflow te_nas zen zico}"
 INIT_CHANNELS="${INIT_CHANNELS:-16}"
@@ -32,12 +32,18 @@ if [[ "$SEED" != "9000" ]]; then
   echo "NB301 reproduction requires SEED=9000" >&2
   exit 2
 fi
+if [[ ! -d "$NAS_DEPENDENCY_ROOT/upstream_zero_cost_pt/sota" ]]; then
+  echo "score dependencies are missing; run setup_nb301_score_dependencies.sh" >&2
+  exit 2
+fi
+if [[ ! -f "$FIXED_ARCH_FILE" ]]; then
+  echo "fixed architecture file not found: $FIXED_ARCH_FILE" >&2
+  exit 2
+fi
 
 mkdir -p "$OUT_ROOT" "$LOG_ROOT" "$OP_SCORE_ROOT"
 export CUDA_VISIBLE_DEVICES="$GPU"
-if [[ -n "${PROXYDIFF_NAS_DEP_ROOT:-}" ]]; then
-  export PROXYDIFF_NAS_DEP_ROOT
-fi
+export NAS_DEPENDENCY_ROOT
 
 run_with_optional_ld() {
   local ld_path="$1"
@@ -119,7 +125,7 @@ echo "score_python=$SCORE_PY" | tee -a "$LOG_ROOT/master.log"
 echo "zico_score_python=$ZICO_SCORE_PY" | tee -a "$LOG_ROOT/master.log"
 echo "refinement_python=$REFINEMENT_PY" | tee -a "$LOG_ROOT/master.log"
 
-cd "$REPRO"
+cd "$NAS_DEPENDENCY_ROOT"
 
 run_proxy_score() {
   local method="$1"
@@ -171,6 +177,18 @@ done
 if [[ "${STOP_AFTER_OPERATION_SCORES:-0}" == "1" ]]; then
   echo "===== STOP_AFTER_OPERATION_SCORES=1 $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
   exit 0
+fi
+
+if [[ -z "$NAS_RUNTIME_ROOT" ]]; then
+  echo "set NAS_RUNTIME_ROOT to the clean NB301 ZeroCostNAS runtime directory" >&2
+  exit 2
+fi
+if [[ -z "$NAS_RUNTIME_PACKAGE_ROOT" ]]; then
+  NAS_RUNTIME_PACKAGE_ROOT="$(dirname "$NAS_RUNTIME_ROOT")"
+fi
+if [[ ! -d "$NAS_RUNTIME_PACKAGE_ROOT/ZeroCostNAS" ]]; then
+  echo "NAS_RUNTIME_PACKAGE_ROOT must contain the ZeroCostNAS package" >&2
+  exit 2
 fi
 
 echo "===== build ProxyDiff NB301 caches $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
@@ -250,11 +268,11 @@ PY
     --out_json "$OUT_ROOT/${run_label}_free_decode.json" \
     > "$LOG_ROOT/free_decode_${run_label}.log" 2>&1
   echo "===== refine $run_label DONE $(date '+%F %T') latest=$latest =====" | tee -a "$LOG_ROOT/master.log"
-  cd "$REPRO"
+  cd "$NAS_DEPENDENCY_ROOT"
 }
 
-run_refinement full_proxy_pool full_proxy_pool 30 80 1.00 0.10 1.00
-run_refinement three_proxy_subset three_proxy_subset 30 80 0.75 0.10 1.00
+run_refinement full_proxy_pool full_proxy_pool 30 40 1.00 0.10 1.00
+run_refinement three_proxy_subset three_proxy_subset 30 40 0.75 0.10 1.00
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \

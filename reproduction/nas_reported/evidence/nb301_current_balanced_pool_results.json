@@ -11,7 +11,7 @@
       "balanced1000_b_rank": 1,
       "balanced1000_c_rank": 1,
       "label": "full_proxy_pool",
-      "selected_accuracy": 94.59962463378906,
+      "selected_accuracy": 94.64030456542969,
       "source_result": "run_output/full_proxy_pool_free_decode.json"
     },
     {
@@ -20,8 +20,26 @@
       "balanced1000_b_rank": 1,
       "balanced1000_c_rank": 1,
       "label": "three_proxy_subset",
-      "selected_accuracy": 94.54334259033203,
+      "selected_accuracy": 94.54096984863281,
       "source_result": "run_output/three_proxy_subset_free_decode.json"
+    },
+    {
+      "average_rank": 48.666666666666664,
+      "balanced1000_a_rank": 50,
+      "balanced1000_b_rank": 48,
+      "balanced1000_c_rank": 48,
+      "label": "az_three",
+      "selected_accuracy": 93.93744659423828,
+      "source_result": "run_output/three_proxy_subset_log_rank.json"
+    },
+    {
+      "average_rank": 54.0,
+      "balanced1000_a_rank": 54,
+      "balanced1000_b_rank": 54,
+      "balanced1000_c_rank": 54,
+      "label": "az_full",
+      "selected_accuracy": 93.90751647949219,
+      "source_result": "run_output/full_proxy_pool_log_rank.json"
     }
   ],
   "split_protocol_revision": "stratified3000_nb301_internalrank_balanced3x1000_readout_v1_20260615",

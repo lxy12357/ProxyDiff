@@ -14,12 +14,16 @@ from pathlib import Path
 TIMESTAMP = "%Y-%m-%d %H:%M:%S"
 SCORE_EVENT = re.compile(r"operation score (\S+) (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)")
 REFINEMENT_EVENT = re.compile(r"refine (full_proxy_pool|three_proxy_subset) (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)")
+REFINE_FROM_CACHE_EVENT = re.compile(
+    r"refine-from-cache (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)"
+)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--score-master-log", type=Path, required=True)
-    parser.add_argument("--refinement-master-log", type=Path, required=True)
+    parser.add_argument("--full-refinement-master-log", type=Path, required=True)
+    parser.add_argument("--three-refinement-master-log", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
     return parser.parse_args()
@@ -51,6 +55,10 @@ def stage_duration(path: Path, proxy_set: str):
         if match and match.group(1) == proxy_set:
             _, event, timestamp = match.groups()
             events[event.lower()] = parse_time(timestamp)
+        generic_match = REFINE_FROM_CACHE_EVENT.search(line)
+        if generic_match:
+            event, timestamp = generic_match.groups()
+            events[event.lower()] = parse_time(timestamp)
     if set(events) != {"start", "done"}:
         raise ValueError(f"incomplete refinement timing in {path}: {events}")
     return (events["done"] - events["start"]).total_seconds()
@@ -60,12 +68,20 @@ def main():
     args = parse_args()
     durations = score_durations(args.score_master_log)
     sets = {
-        "full_proxy_pool": ["l2_norm", "nwot", "zen", "zico", "near", "jacob", "swap", "meco"],
-        "three_proxy_subset": ["jacob", "near", "plain"],
+        "full_proxy_pool": [
+            "epe_nas", "epsinas", "eznas_darts", "fisher", "grad_norm",
+            "grasp", "jacob", "jacob_cov", "l2_norm", "meco", "near",
+            "nwot", "plain", "snip", "swap", "synflow", "te_nas", "zen", "zico",
+        ],
+        "three_proxy_subset": [
+            "epe_nas", "epsinas", "eznas_darts", "fisher", "grad_norm",
+            "jacob", "jacob_cov", "l2_norm", "near", "nwot", "plain",
+            "snip", "synflow", "zico",
+        ],
     }
     refinement = {
-        "full_proxy_pool": stage_duration(args.refinement_master_log, "full_proxy_pool"),
-        "three_proxy_subset": stage_duration(args.refinement_master_log, "three_proxy_subset"),
+        "full_proxy_pool": stage_duration(args.full_refinement_master_log, "full_proxy_pool"),
+        "three_proxy_subset": stage_duration(args.three_refinement_master_log, "three_proxy_subset"),
     }
     rows = []
     for name, methods in sets.items():
@@ -76,7 +92,7 @@ def main():
         rows.append(
             {
                 "proxy_set": name,
-                "proxy_names": ",".join(methods),
+                "candidate_proxy_names": ",".join(methods),
                 "score_seconds": score_seconds,
                 "score_gpu_hours": score_seconds / 3600.0,
                 "refinement_seconds": refinement[name],

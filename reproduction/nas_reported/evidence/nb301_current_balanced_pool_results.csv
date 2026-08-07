@@ -1,3 +1,5 @@
 label,selected_accuracy,balanced1000_a_rank,balanced1000_b_rank,balanced1000_c_rank,average_rank,source_result
-full_proxy_pool,94.59962463378906,2,1,1,1.3333333333333333,run_output/full_proxy_pool_free_decode.json
-three_proxy_subset,94.54334259033203,2,1,1,1.3333333333333333,run_output/three_proxy_subset_free_decode.json
+full_proxy_pool,94.64030456542969,2,1,1,1.3333333333333333,run_output/full_proxy_pool_free_decode.json
+three_proxy_subset,94.54096984863281,2,1,1,1.3333333333333333,run_output/three_proxy_subset_free_decode.json
+az_three,93.93744659423828,50,48,48,48.666666666666664,run_output/three_proxy_subset_log_rank.json
+az_full,93.90751647949219,54,54,54,54.0,run_output/full_proxy_pool_log_rank.json

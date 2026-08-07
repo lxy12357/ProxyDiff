@@ -6,9 +6,10 @@ refinement pipeline in `reproduction/nas_v2/`.
 After completing the main pipeline, run all core analyses on GPU0:
 
 ```bash
-OP_SCORE_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
-MAIN_OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main \
-OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_reported \
+NAS_RUNTIME_ROOT=/path/to/runtime/ZeroCostNAS \
+OP_SCORE_ROOT=/path/to/nb301_v2_main/operation_scores \
+MAIN_OUT_ROOT=/path/to/nb301_v2_main \
+OUT_ROOT=/path/to/nb301_reported \
 bash reproduction/nas_reported/run_nb301_reported_analysis.sh 0
 ```
 
@@ -20,8 +21,9 @@ combined summary.
 After computing the operation scores, run the component ablation on GPU0:
 
 ```bash
-OP_SCORE_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
-OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_reported_component_ablation \
+NAS_RUNTIME_ROOT=/path/to/runtime/ZeroCostNAS \
+OP_SCORE_ROOT=/path/to/nb301_v2_main/operation_scores \
+OUT_ROOT=/path/to/nb301_reported_component_ablation \
 bash reproduction/nas_reported/run_nb301_component_ablation.sh 0
 ```
 
@@ -36,9 +38,9 @@ Recompute correlation and effective rank directly from the operation scores:
 
 ```bash
 python reproduction/nas_reported/analyze_nb301_proxy_geometry.py \
-  --op-score-root /hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
-  --out-csv /hdd/xiaoyun/ProxyDiff_Repro/nb301_reported/proxy_geometry.csv \
-  --out-details-json /hdd/xiaoyun/ProxyDiff_Repro/nb301_reported/factorization_details.json
+  --op-score-root /path/to/nb301_v2_main/operation_scores \
+  --out-csv /path/to/nb301_reported/proxy_geometry.csv \
+  --out-details-json /path/to/nb301_reported/factorization_details.json
 ```
 
 ## Axis Calibration
@@ -60,8 +62,9 @@ python reproduction/nas_reported/extract_nb301_axis_calibration.py \
 The fixed 3-proxy and 5-proxy subset launcher is provided by the main package:
 
 ```bash
-OP_SCORE_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
-OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_subset_stability \
+NAS_RUNTIME_ROOT=/path/to/runtime/ZeroCostNAS \
+OP_SCORE_ROOT=/path/to/nb301_v2_main/operation_scores \
+OUT_ROOT=/path/to/nb301_v2_subset_stability \
 bash reproduction/nas_v2/scripts/run_nb301_v2_subset_stability.sh 0
 ```
 
@@ -69,14 +72,19 @@ For the current paper configuration, use the same rounded refinement schedule
 for every controlled subset:
 
 ```bash
-OP_SCORE_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores \
-OUT_ROOT=/hdd/xiaoyun/ProxyDiff_Repro/nb301_subset_current_method \
-REDUCED_AXIS_STEPS=30 REDUCED_TOTAL_STEPS=80 REDUCED_RESIDUAL_SCALE=0.75 \
-RETAINED_K5_AXIS_STEPS=30 RETAINED_K5_TOTAL_STEPS=80 RETAINED_K5_RESIDUAL_SCALE=0.75 \
+NAS_RUNTIME_ROOT=/path/to/runtime/ZeroCostNAS \
+OP_SCORE_ROOT=/path/to/nb301_v2_main/operation_scores \
+OUT_ROOT=/path/to/nb301_subset_current_method \
+SUBSET_AXIS_STEPS=30 SUBSET_TOTAL_STEPS=40 SUBSET_RESIDUAL_SCALE=0.75 \
 COMPONENT_CORRECTION_LR=0.10 COMPONENT_CORRECTION_SCALE=1.00 \
-OPERATION_TOPK_COUNT=5 SEED=9000 PROXYDIFF_FIXED_SAMPLER_SEED=9000 \
+OPERATION_TOPK_COUNT=5 SEED=9000 \
 bash reproduction/nas_v2/scripts/run_nb301_v2_subset_stability.sh 0
 ```
+
+For a two-GPU run, start the same command twice with
+`SUBSET_SHARD_INDEX=0 SUBSET_SHARD_COUNT=2` on GPU0 and
+`SUBSET_SHARD_INDEX=1 SUBSET_SHARD_COUNT=2` on GPU1. Both shards write
+disjoint subset directories under the shared output root.
 
 ## Paired Aggregation Controls
 
@@ -100,6 +108,9 @@ bash reproduction/nas_reported/run_nb301_subset_control_search.sh
 Both launchers use seed `9000`, population size `50`, parent count `10`, five
 generations, 25 crossover children, and 25 mutation children. The search code
 is CPU-only by default because operation scores are already computed.
+
+The current paired main controls use `fisher,jacob,synflow` for the budgeted
+row and the admitted nine-proxy full set for the full row.
 
 ## Balanced-Pool Readout
 

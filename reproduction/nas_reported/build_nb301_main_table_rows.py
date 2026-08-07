@@ -27,9 +27,9 @@ def main():
     runtimes = rows_by(args.runtime_csv, "proxy_set")
     mapping = [
         ("ProxyDiff (3 proxy, ours)", "three_proxy_subset", "three_proxy_subset", "proxydiff"),
-        ("ProxyDiff (8 proxy, ours)", "full_proxy_pool", "full_proxy_pool", "proxydiff"),
+        ("ProxyDiff (9 proxy, ours)", "full_proxy_pool", "full_proxy_pool", "proxydiff"),
         ("AZ-NAS (3 proxy)", "az_three", "three_proxy_subset", "log_rank"),
-        ("AZ-NAS (8 proxy)", "az_full", "full_proxy_pool", "log_rank"),
+        ("AZ-NAS (9 proxy)", "az_full", "full_proxy_pool", "log_rank"),
     ]
     rows = []
     for display_name, evaluation_key, runtime_key, method_type in mapping:

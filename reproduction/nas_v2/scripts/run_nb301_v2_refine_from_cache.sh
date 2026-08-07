@@ -5,25 +5,36 @@ PROXY_SET="${1:?full_proxy_pool or three_proxy_subset}"
 CACHE="${2:?path to *_proxydiff_cache.pt}"
 GPU="${3:-0}"
 
-REPRO="${REPRO:-/hdd/xiaoyun/ProxyDARTS/Reproduction}"
-NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-${REPRO}/nas_runtime/ZeroCostNAS}"
-NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-${NAS_RUNTIME_ROOT%/ZeroCostNAS}}"
-REFINEMENT_PY="${REFINEMENT_PY:-${PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}}"
-REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/lib:/usr/local/cuda-11.7/lib64:/usr/local/cuda-11.7/targets/x86_64-linux/lib}"
-OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_refine_from_cache/${PROXY_SET}}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NAS_PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+NAS_SRC_DIR="${NAS_PACKAGE_DIR}/src"
+NAS_CONFIG_DIR="${NAS_PACKAGE_DIR}/configs"
+
+NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:?set NAS_RUNTIME_ROOT to the clean NB301 runtime directory}"
+NAS_RUNTIME_PACKAGE_ROOT="${NAS_RUNTIME_PACKAGE_ROOT:-$(dirname "$NAS_RUNTIME_ROOT")}"
+REFINEMENT_PY="${REFINEMENT_PY:-${PY:-python}}"
+REFINEMENT_LD_LIBRARY_PATH="${REFINEMENT_LD_LIBRARY_PATH:-}"
+OUT_ROOT="${OUT_ROOT:-${NAS_PACKAGE_DIR}/outputs/refine_from_cache/${PROXY_SET}}"
 LOG_ROOT="${LOG_ROOT:-${OUT_ROOT}/logs}"
-FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${REPRO}/fixed_archs/arch_dataset_20cell_c36.pt}"
+FIXED_ARCH_FILE="${FIXED_ARCH_FILE:-${NAS_PACKAGE_DIR}/assets/arch_dataset_20cell_c36.pt}"
 SEED="${SEED:-9000}"
 
 if [[ "$SEED" != "9000" ]]; then
   echo "NB301 reproduction requires SEED=9000" >&2
   exit 2
 fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NAS_PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-NAS_SRC_DIR="${NAS_PACKAGE_DIR}/src"
-NAS_CONFIG_DIR="${NAS_PACKAGE_DIR}/configs"
+if [[ ! -d "$NAS_RUNTIME_PACKAGE_ROOT/ZeroCostNAS" ]]; then
+  echo "NAS_RUNTIME_PACKAGE_ROOT must contain the ZeroCostNAS package" >&2
+  exit 2
+fi
+if [[ ! -f "$CACHE" ]]; then
+  echo "ProxyDiff cache not found: $CACHE" >&2
+  exit 2
+fi
+if [[ ! -f "$FIXED_ARCH_FILE" ]]; then
+  echo "fixed architecture file not found: $FIXED_ARCH_FILE" >&2
+  exit 2
+fi
 
 if [[ -z "${COMPONENT_CORRECTION_SCALE:-}" && -n "${COMPONENT_CORRECTION_AXIS_SCALE:-}" ]]; then
   COMPONENT_CORRECTION_SCALE="$COMPONENT_CORRECTION_AXIS_SCALE"
@@ -31,13 +42,13 @@ fi
 
 if [[ "$PROXY_SET" == "full_proxy_pool" ]]; then
   AXIS_CALIBRATION_STEPS="${AXIS_CALIBRATION_STEPS:-30}"
-  TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-80}"
+  TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-40}"
   RESIDUAL_AXIS_SCALE="${RESIDUAL_AXIS_SCALE:-1.00}"
   COMPONENT_CORRECTION_LR="${COMPONENT_CORRECTION_LR:-0.10}"
   COMPONENT_CORRECTION_SCALE="${COMPONENT_CORRECTION_SCALE:-1.00}"
 elif [[ "$PROXY_SET" == "three_proxy_subset" ]]; then
   AXIS_CALIBRATION_STEPS="${AXIS_CALIBRATION_STEPS:-30}"
-  TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-80}"
+  TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-40}"
   RESIDUAL_AXIS_SCALE="${RESIDUAL_AXIS_SCALE:-0.75}"
   COMPONENT_CORRECTION_LR="${COMPONENT_CORRECTION_LR:-0.10}"
   COMPONENT_CORRECTION_SCALE="${COMPONENT_CORRECTION_SCALE:-1.00}"

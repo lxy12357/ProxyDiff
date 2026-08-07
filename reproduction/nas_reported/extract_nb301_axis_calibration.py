@@ -51,7 +51,7 @@ def main() -> None:
     artifact = torch.load(args.axis_artifact, map_location="cpu")
     parameters = flatten_axis_parameters(artifact.get("axis_calibration_weights"))
 
-    axes = factorization["oriented_axes"]
+    axes = factorization.get("refinement_axes", factorization["oriented_axes"])
     if len(parameters) < len(axes) + 1:
         raise RuntimeError(
             f"axis artifact contains {len(parameters)} parameters, but {len(axes) + 1} are required"
@@ -64,6 +64,7 @@ def main() -> None:
             "effective_coefficient": 1.0,
             "strongest_proxy": "",
             "strongest_abs_corr": "",
+            "axis_type": "fixed_readout",
         }
     ]
     profile_rows = []
@@ -76,6 +77,7 @@ def main() -> None:
                 "effective_coefficient": args.residual_axis_scale * math.tanh(raw_parameter),
                 "strongest_proxy": axis["strongest_proxy"],
                 "strongest_abs_corr": axis["strongest_abs_corr"],
+                "axis_type": axis.get("axis_type", "principal_axis"),
             }
         )
         for proxy_name, correlation in axis["oriented_corr"].items():

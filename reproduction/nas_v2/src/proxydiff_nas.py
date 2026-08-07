@@ -4,8 +4,8 @@
 This script intentionally keeps only the paper-facing NB301 logic:
 
 1. Load operation-level proxy scores from `operation_scores.json`.
-2. Apply the utility gate for the full proxy pool, or use a fixed subset for
-   controlled reduced-proxy rows.
+2. Apply the label-free consensus/complement gate for the full proxy pool, or
+   select a balanced subset from short-running proxies.
 3. Rank-align the retained proxies and build whitened PCA axes.
 4. Orient axes by their strongest proxy profile and write the refinement cache.
 
@@ -16,7 +16,9 @@ The output cache format matches the external NAS runtime evaluator expected by
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -45,18 +47,22 @@ FULL_PROXY_POOL = [
     "zico",
 ]
 
-REFERENCE_RETAINED_PROXIES = [
-    "nwot",
-    "meco",
-    "swap",
-    "near",
+SHORT_SCORE_PROXY_POOL = [
+    "epe_nas",
+    "epsinas",
+    "eznas_darts",
+    "fisher",
+    "grad_norm",
     "jacob",
+    "jacob_cov",
     "l2_norm",
-    "zen",
+    "near",
+    "nwot",
+    "plain",
+    "snip",
+    "synflow",
     "zico",
 ]
-
-REDUCED_PROXY_SET = ["jacob", "near", "plain"]
 
 AXIS_ORIENTATION_PROXIES = [
     "zcpt_jacob",
@@ -68,6 +74,9 @@ AXIS_ORIENTATION_PROXIES = [
     "zcpt_zen",
     "zcpt_zico",
 ]
+
+COMPLEMENT_KEEP_RATIO = 0.9
+COMPLEMENT_OPERATION_TOPK_COUNT = 5
 
 
 def _clean_name(name: str) -> str:
@@ -183,6 +192,191 @@ def _utility_gap_gate(
     return mask, reweighted, kept, dropped
 
 
+def _effective_rank(matrix: np.ndarray) -> float:
+    covariance = (matrix.T @ matrix) / max(matrix.shape[0] - 1, 1)
+    eigenvalues = np.clip(np.linalg.eigvalsh(covariance), 0.0, None)
+    total = float(eigenvalues.sum())
+    if total <= 1e-12:
+        return 0.0
+    return float(total * total / max(float(eigenvalues @ eigenvalues), 1e-12))
+
+
+def _orthonormal_basis(matrix: np.ndarray) -> np.ndarray:
+    left_vectors, singular_values, _ = np.linalg.svd(matrix, full_matrices=False)
+    if singular_values.size == 0:
+        return np.zeros((matrix.shape[0], 0), dtype=float)
+    threshold = max(float(singular_values[0]), 1.0) * 1e-10
+    return left_vectors[:, singular_values > threshold]
+
+
+def _progressive_operation_mask(score: np.ndarray, top_k: int) -> np.ndarray:
+    cells = np.asarray(score, dtype=float).reshape(2, 14, 7)
+    mask = np.zeros_like(cells, dtype=bool)
+    for cell in range(cells.shape[0]):
+        for edge in range(cells.shape[1]):
+            order = np.argsort(-cells[cell, edge], kind="mergesort")
+            mask[cell, edge, order[:top_k]] = True
+    return mask
+
+
+def _changed_operation_edge_fraction(left: np.ndarray, right: np.ndarray) -> float:
+    changed = 0
+    for cell in range(left.shape[0]):
+        for edge in range(left.shape[1]):
+            changed += int(not np.array_equal(left[cell, edge], right[cell, edge]))
+    return float(changed / (left.shape[0] * left.shape[1]))
+
+
+def _factorized_readout(raw: np.ndarray, proxy_names: list[str]) -> np.ndarray:
+    vectors, _ = factorize_proxy_matrix(
+        raw,
+        proxy_names,
+        apply_gate=False,
+    )
+    return np.asarray(vectors[0], dtype=float)
+
+
+def _operation_boundary_margin(score: np.ndarray, top_k: int) -> float:
+    cells = np.asarray(score, dtype=float).reshape(2, 14, 7)
+    ordered = np.sort(cells, axis=2)[:, :, ::-1]
+    scale = np.maximum(np.std(cells, axis=2), 1e-12)
+    return float(np.mean((ordered[:, :, top_k - 1] - ordered[:, :, top_k]) / scale))
+
+
+def _percentile_ranks(values: list[float]) -> np.ndarray:
+    order = np.argsort(np.asarray(values, dtype=float), kind="mergesort")
+    ranks = np.empty(len(values), dtype=float)
+    ranks[order] = np.arange(1, len(values) + 1, dtype=float)
+    return ranks / float(len(values))
+
+
+def _balanced_subset_gate(
+    raw: np.ndarray,
+    proxy_names: list[str],
+    subset_size: int = 3,
+    operation_topk_count: int = COMPLEMENT_OPERATION_TOPK_COUNT,
+) -> tuple[list[int], dict[str, object]]:
+    aligned = _rank_align(raw)
+    utilities = _proxy_utilities(_normalize_columns(raw))
+    rows = []
+    for indices_tuple in itertools.combinations(range(raw.shape[1]), subset_size):
+        indices = list(indices_tuple)
+        names = [proxy_names[index] for index in indices]
+        readout = _factorized_readout(raw[:, indices], names)
+        rows.append({
+            "indices": indices,
+            "names": names,
+            "consensus_utility": float(np.mean(utilities[indices])),
+            "effective_rank": _effective_rank(aligned[:, indices]),
+            "operation_boundary_margin": _operation_boundary_margin(
+                readout, operation_topk_count
+            ),
+        })
+    metric_names = ["consensus_utility", "effective_rank", "operation_boundary_margin"]
+    percentiles = {
+        metric: _percentile_ranks([float(row[metric]) for row in rows])
+        for metric in metric_names
+    }
+    for row_index, row in enumerate(rows):
+        evidence = [float(percentiles[metric][row_index]) for metric in metric_names]
+        row["evidence_percentiles"] = dict(zip(metric_names, evidence))
+        row["balanced_bottleneck"] = min(evidence)
+        row["balanced_geometric_mean"] = float(
+            math.exp(sum(math.log(max(value, 1e-12)) for value in evidence) / len(evidence))
+        )
+    rows.sort(key=lambda row: (
+        -float(row["balanced_bottleneck"]),
+        -float(row["balanced_geometric_mean"]),
+        row["names"],
+    ))
+    selected = list(rows[0]["indices"])
+    return selected, {
+        "subset_size": subset_size,
+        "operation_topk_count": operation_topk_count,
+        "selection_rule": "maximin evidence percentile with geometric-mean tie break",
+        "metrics": metric_names,
+        "selected": rows[0],
+        "top_candidates": rows[:10],
+    }
+
+
+def _novelty_efficiency_complement_gate(
+    raw: np.ndarray,
+    proxy_names: list[str],
+    core_mask: np.ndarray,
+    *,
+    complement_keep_ratio: float = COMPLEMENT_KEEP_RATIO,
+    operation_topk_count: int = COMPLEMENT_OPERATION_TOPK_COUNT,
+) -> tuple[np.ndarray, dict[str, object]]:
+    core_indices = [index for index in range(raw.shape[1]) if bool(core_mask[index])]
+    candidate_indices = [index for index in range(raw.shape[1]) if not bool(core_mask[index])]
+    if not candidate_indices:
+        return core_mask.copy(), {
+            "complement_keep_ratio": float(complement_keep_ratio),
+            "operation_topk_count": int(operation_topk_count),
+            "candidate_evidence": [],
+            "added_names": [],
+        }
+
+    aligned = _rank_align(raw)
+    core_aligned = aligned[:, core_indices]
+    core_effective_rank = _effective_rank(core_aligned)
+    core_names = [proxy_names[index] for index in core_indices]
+    core_readout = _factorized_readout(raw[:, core_indices], core_names)
+    core_operation_mask = _progressive_operation_mask(core_readout, operation_topk_count)
+
+    evidence = []
+    for candidate_index in candidate_indices:
+        joined_indices = sorted(core_indices + [candidate_index])
+        joined_names = [proxy_names[index] for index in joined_indices]
+        joined_readout = _factorized_readout(raw[:, joined_indices], joined_names)
+        joined_operation_mask = _progressive_operation_mask(joined_readout, operation_topk_count)
+        changed_fraction = _changed_operation_edge_fraction(
+            core_operation_mask,
+            joined_operation_mask,
+        )
+        rank_delta = max(
+            0.0,
+            _effective_rank(aligned[:, joined_indices]) - core_effective_rank,
+        )
+        evidence.append(
+            {
+                "index": int(candidate_index),
+                "name": proxy_names[candidate_index],
+                "effective_rank_delta": rank_delta,
+                "changed_operation_edge_fraction": changed_fraction,
+                "novelty_efficiency": rank_delta / changed_fraction if changed_fraction > 0 else 0.0,
+            }
+        )
+
+    max_efficiency = max(float(row["novelty_efficiency"]) for row in evidence)
+    selected = core_mask.copy()
+    added_names = []
+    for row in evidence:
+        normalized = (
+            float(row["novelty_efficiency"]) / max_efficiency
+            if max_efficiency > 1e-12 else 0.0
+        )
+        passes = bool(
+            float(row["novelty_efficiency"]) > 0.0
+            and normalized >= complement_keep_ratio
+        )
+        row["normalized_novelty_efficiency"] = normalized
+        row["passes_threshold"] = passes
+        if passes:
+            selected[int(row["index"])] = True
+            added_names.append(str(row["name"]))
+
+    return selected, {
+        "complement_keep_ratio": float(complement_keep_ratio),
+        "operation_topk_count": int(operation_topk_count),
+        "core_effective_rank": core_effective_rank,
+        "candidate_evidence": evidence,
+        "added_names": added_names,
+        "abstained": not added_names,
+    }
+
+
 def _cluster_profiles(profiles: list[tuple[int, np.ndarray]], threshold: float = 0.6) -> list[dict[str, object]]:
     clusters: list[list[tuple[int, np.ndarray]]] = []
     for axis, profile in profiles:
@@ -243,18 +437,28 @@ def factorize_proxy_matrix(
     proxy_names: list[str],
     *,
     apply_gate: bool,
-    cache_layout: str,
-    cache_device: str,
 ) -> tuple[list[np.ndarray], dict[str, object]]:
-    if cache_layout not in {"prior_axes", "readout_axes", "readout_prior_axes"}:
-        raise ValueError(f"Unknown cache_layout: {cache_layout}")
     gate_utilities = _proxy_utilities(_normalize_columns(raw))
     if apply_gate:
-        mask, reweighted, gate_kept, gate_dropped = _utility_gap_gate(gate_utilities)
-        retained = raw[:, mask]
-        retained_names = [proxy_names[i] for i in range(len(proxy_names)) if bool(mask[i])]
+        core_mask, reweighted, core_kept, core_dropped = _utility_gap_gate(gate_utilities)
+        mask, complement_meta = _novelty_efficiency_complement_gate(
+            raw,
+            proxy_names,
+            core_mask,
+        )
+        gate_kept = [index for index in range(raw.shape[1]) if bool(mask[index])]
+        gate_dropped = [index for index in range(raw.shape[1]) if not bool(mask[index])]
+        complement_indices = [index for index in gate_kept if not bool(core_mask[index])]
+        retained = raw[:, core_mask]
+        retained_names = [
+            proxy_names[index] for index in range(len(proxy_names)) if bool(core_mask[index])
+        ]
     else:
         reweighted = gate_utilities
+        core_kept = list(range(raw.shape[1]))
+        core_dropped = []
+        complement_meta = None
+        complement_indices = []
         gate_kept = list(range(raw.shape[1]))
         gate_dropped = []
         retained = raw
@@ -301,12 +505,13 @@ def factorize_proxy_matrix(
         )
 
     axis_matrix = np.column_stack(oriented_axes) if oriented_axes else np.zeros((raw.shape[0], 0), dtype=float)
+    refinement_axis_meta = [dict(row, axis_type="principal_axis") for row in axis_meta]
     denom = 1.0 + float(axis_matrix.shape[1])
-    prior_tensor = torch.tensor(prior[:, 0].astype(np.float32).reshape(2, 14, 7), device=cache_device)
+    prior_tensor = torch.tensor(prior[:, 0].astype(np.float32).reshape(2, 14, 7), device="cpu")
     readout_cells = [prior_tensor[cell].clone() for cell in range(prior_tensor.shape[0])]
     axis_cells = []
     for j, axis in enumerate(pre_oriented_axes):
-        axis_tensor = torch.tensor(axis.astype(np.float32).reshape(2, 14, 7), device=cache_device)
+        axis_tensor = torch.tensor(axis.astype(np.float32).reshape(2, 14, 7), device="cpu")
         direction = float(axis_meta[j]["direction"])
         cells = [axis_tensor[cell].clone() for cell in range(axis_tensor.shape[0])]
         for cell in range(len(cells)):
@@ -319,36 +524,69 @@ def factorize_proxy_matrix(
             readout_cells[cell] = readout_cells[cell] + cells[cell] / denom
     readout = torch.stack(readout_cells, dim=0).detach().cpu().numpy().reshape(-1)
     axes_only = [axis_matrix[:, j] for j in range(axis_matrix.shape[1])]
-    if cache_layout == "prior_axes":
-        cache_vectors = [prior[:, 0]] + [axis for axis in pre_oriented_axes]
-    elif cache_layout == "readout_axes":
-        cache_vectors = [readout] + axes_only
-    else:
-        cache_vectors = [readout, prior[:, 0]] + axes_only
+    residual_complements = []
+    if complement_indices:
+        all_aligned = _rank_align(raw)
+        core_aligned = all_aligned[:, core_kept]
+        core_basis = _orthonormal_basis(core_aligned)
+        for candidate_index in complement_indices:
+            candidate = all_aligned[:, candidate_index]
+            residual = candidate - core_basis @ (core_basis.T @ candidate)
+            residual = _normalize_columns(residual.reshape(-1, 1))[:, 0]
+            direction = 1.0 if _safe_corr(residual, candidate) >= 0.0 else -1.0
+            residual = residual * direction
+            axes_only.append(residual)
+            profile_names = [proxy_names[index] for index in gate_kept]
+            profile = {
+                proxy_names[index]: float(_safe_corr(residual, all_aligned[:, index]))
+                for index in gate_kept
+            }
+            strongest_proxy = max(profile, key=lambda name: abs(profile[name]))
+            refinement_axis_meta.append({
+                "axis": len(axes_only),
+                "axis_type": "residual_complement",
+                "direction": direction,
+                "strongest_proxy": strongest_proxy,
+                "strongest_abs_corr": abs(profile[strongest_proxy]),
+                "corr": profile,
+                "oriented_corr": profile,
+                "profile_proxy_order": profile_names,
+            })
+            residual_complements.append({
+                "name": proxy_names[candidate_index],
+                "axis": len(axes_only),
+                "direction": direction,
+                "correlation_to_proxy": float(_safe_corr(residual, candidate)),
+            })
+    cache_vectors = [readout] + axes_only
 
     meta = {
         "proxy_names": proxy_names,
         "apply_gate": bool(apply_gate),
-        "cache_layout": cache_layout,
-        "cache_device": cache_device,
+        "cache_layout": "readout_axes",
+        "factorization_device": "cpu",
         "gate_utility_raw": gate_utilities.tolist(),
         "gate_utility_reweighted": reweighted.tolist(),
+        "gate_stage1_kept_names": [proxy_names[i] for i in core_kept],
+        "gate_stage1_dropped_names": [proxy_names[i] for i in core_dropped],
+        "complement_admission": complement_meta,
         "gate_kept_names": [proxy_names[i] for i in gate_kept],
         "gate_dropped_names": [proxy_names[i] for i in gate_dropped],
         "dedup_min_size": 999,
         "dedup_applied_once": False,
-        "dedup_representatives": retained_names,
+        "dedup_representatives": [proxy_names[i] for i in gate_kept],
         "align": "rank",
-        "transform": "pc_axes_whitened_prior_axes",
+        "transform": "rank_aligned_whitened_pc_axes",
         "shared_basis": "projected_columns",
-        "rank_rule": "largest_eigengap",
-        "auto_k": 1,
+        "axis_retention_rule": "retain_all_axes",
         "eigvals_desc": eigvals_desc.tolist(),
-        "n_axes": int(axis_matrix.shape[1]),
+        "n_axes": len(axes_only),
         "n_cache_metrics": len(cache_vectors),
         "orientation_proxy_order": orient_names,
         "profile_clusters": _cluster_profiles(profiles, threshold=0.6),
         "oriented_axes": axis_meta,
+        "refinement_axes": refinement_axis_meta,
+        "residual_complement_axes": residual_complements,
         "readout": "uniform average over factorized prior and profile-oriented axes",
     }
     return cache_vectors, meta
@@ -372,7 +610,6 @@ def build_proxy_set(
     proxies: list[str],
     *,
     apply_gate: bool,
-    cache_layout: str,
     cache_device: str,
 ) -> dict[str, object]:
     raw, input_meta = load_operation_scores(op_root, proxies)
@@ -381,8 +618,6 @@ def build_proxy_set(
         raw,
         proxy_names,
         apply_gate=apply_gate,
-        cache_layout=cache_layout,
-        cache_device=cache_device,
     )
     cache_path = out_dir / f"{proxy_set_name}_proxydiff_cache.pt"
     write_refinement_cache(cache_path, vectors, cache_device)
@@ -390,13 +625,49 @@ def build_proxy_set(
         "proxy_set": proxy_set_name,
         "proxies": proxy_names,
         "cache": str(cache_path),
+        "output_cache_device": cache_device,
         "n_metrics": len(vectors),
-        "metric0": "factorized_prior" if cache_layout == "prior_axes" else "uniform_axis_readout",
+        "metric0": "uniform_axis_readout",
         "correction_columns": [f"axis_{i}" for i in range(1, len(vectors))],
         "input_meta": input_meta,
         "factorization": factor_meta,
     }
     (out_dir / f"{proxy_set_name}_details.json").write_text(json.dumps(details, indent=2), encoding="utf-8")
+    return details
+
+
+def build_balanced_three_proxy_set(
+    op_root: Path,
+    out_dir: Path,
+    cache_device: str,
+) -> dict[str, object]:
+    raw, input_meta = load_operation_scores(op_root, SHORT_SCORE_PROXY_POOL)
+    all_names = [f"zcpt_{name}" for name in SHORT_SCORE_PROXY_POOL]
+    selected_indices, gate_meta = _balanced_subset_gate(raw, all_names)
+    selected_names = [all_names[index] for index in selected_indices]
+    vectors, factor_meta = factorize_proxy_matrix(
+        raw[:, selected_indices],
+        selected_names,
+        apply_gate=False,
+    )
+    cache_path = out_dir / "three_proxy_subset_proxydiff_cache.pt"
+    write_refinement_cache(cache_path, vectors, cache_device)
+    details = {
+        "proxy_set": "three_proxy_subset",
+        "proxies": selected_names,
+        "candidate_pool": all_names,
+        "cache": str(cache_path),
+        "output_cache_device": cache_device,
+        "n_metrics": len(vectors),
+        "metric0": "uniform_axis_readout",
+        "correction_columns": [f"axis_{index}" for index in range(1, len(vectors))],
+        "input_meta": input_meta,
+        "selection": gate_meta,
+        "factorization": factor_meta,
+    }
+    (out_dir / "three_proxy_subset_details.json").write_text(
+        json.dumps(details, indent=2), encoding="utf-8"
+    )
     return details
 
 
@@ -406,7 +677,7 @@ def main() -> None:
     parser.add_argument("--out-dir", required=True, type=Path)
     parser.add_argument(
         "--proxy-set",
-        choices=["full_proxy_pool", "utility_gated_pool", "three_proxy_subset", "both"],
+        choices=["full_proxy_pool", "three_proxy_subset", "both"],
         default="both",
         help="Proxy set to convert into a ProxyDiff refinement cache.",
     )
@@ -443,7 +714,6 @@ def main() -> None:
                 args.custom_proxy_set_name,
                 args.custom_proxies.split(),
                 apply_gate=False,
-                cache_layout="readout_prior_axes",
                 cache_device=cache_device,
             )
         )
@@ -463,34 +733,11 @@ def main() -> None:
                 "full_proxy_pool",
                 FULL_PROXY_POOL,
                 apply_gate=True,
-                cache_layout="readout_axes",
-                cache_device=cache_device,
-            )
-        )
-    if args.proxy_set in {"utility_gated_pool", "both"}:
-        rows.append(
-            build_proxy_set(
-                args.op_root,
-                args.out_dir,
-                "utility_gated_pool",
-                REFERENCE_RETAINED_PROXIES,
-                apply_gate=False,
-                cache_layout="prior_axes",
                 cache_device=cache_device,
             )
         )
     if args.proxy_set in {"three_proxy_subset", "both"}:
-        rows.append(
-            build_proxy_set(
-                args.op_root,
-                args.out_dir,
-                "three_proxy_subset",
-                REDUCED_PROXY_SET,
-                apply_gate=False,
-                cache_layout="readout_prior_axes",
-                cache_device=cache_device,
-            )
-        )
+        rows.append(build_balanced_three_proxy_set(args.op_root, args.out_dir, cache_device))
 
     manifest = {
         "description": "ProxyDiff NB301 caches generated from ZCPT operation-ablation scores",

@@ -1,5 +1,5 @@
 source_pool,subset_size,rank_mean_median,log_rank_median,proxydiff_median,proxydiff_min,proxydiff_max
-retained_pool,3,91.9069,93.9746,94.2834,94.2207,94.4622
-retained_pool,5,91.3600,93.9348,93.8127,92.7596,94.3109
-all_proxy_pool,3,93.0626,93.8693,94.5129,94.2654,94.5288
-all_proxy_pool,5,93.3811,94.2677,93.7257,93.3284,94.5370
+retained_pool,3,91.9069,93.9746,94.6132,94.2630,94.6460
+retained_pool,5,91.3600,93.9348,94.0546,93.9943,94.5056
+all_proxy_pool,3,93.0626,93.8693,94.2977,93.9152,94.4542
+all_proxy_pool,5,93.3811,94.2677,94.2740,93.5840,94.4906

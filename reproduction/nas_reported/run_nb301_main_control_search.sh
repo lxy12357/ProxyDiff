@@ -4,11 +4,10 @@ set -euo pipefail
 CPU_ONLY="${CPU_ONLY:-1}"
 OPERATION_SCORE_ROOT="${OPERATION_SCORE_ROOT:?set OPERATION_SCORE_ROOT}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?set OUTPUT_ROOT}"
-NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime/ZeroCostNAS}"
-FIXED_ARCHITECTURE_FILE="${FIXED_ARCHITECTURE_FILE:-/hdd/xiaoyun/ProxyDARTS/Reproduction/fixed_archs/arch_dataset_20cell_c36.pt}"
-PYTHON="${PYTHON:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:?set NAS_RUNTIME_ROOT to the clean NB301 runtime directory}"
+FIXED_ARCHITECTURE_FILE="${FIXED_ARCHITECTURE_FILE:-${SCRIPT_DIR}/../nas_v2/assets/arch_dataset_20cell_c36.pt}"
+PYTHON="${PYTHON:-python}"
 SEARCH_SCRIPT="${SCRIPT_DIR}/search_nb301_operation_score_fusion.py"
 mkdir -p "${OUTPUT_ROOT}/logs"
 
@@ -36,8 +35,8 @@ run_search() {
 }
 
 echo "===== NB301 paired control searches START $(date '+%F %T') =====" | tee "${OUTPUT_ROOT}/logs/master.log"
-run_search three_proxy_subset "jacob,near,plain" log_rank
-run_search three_proxy_subset "jacob,near,plain" mean_rank
-run_search full_proxy_pool "l2_norm,nwot,zen,zico,near,jacob,swap,meco" log_rank
-run_search full_proxy_pool "l2_norm,nwot,zen,zico,near,jacob,swap,meco" mean_rank
+run_search three_proxy_subset "fisher,jacob,synflow" log_rank
+run_search three_proxy_subset "fisher,jacob,synflow" mean_rank
+run_search full_proxy_pool "jacob,l2_norm,meco,near,nwot,swap,synflow,zen,zico" log_rank
+run_search full_proxy_pool "jacob,l2_norm,meco,near,nwot,swap,synflow,zen,zico" mean_rank
 echo "===== NB301 paired control searches DONE $(date '+%F %T') =====" | tee -a "${OUTPUT_ROOT}/logs/master.log"

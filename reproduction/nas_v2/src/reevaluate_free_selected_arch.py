@@ -76,11 +76,12 @@ def install_configspace_normal_bounds_compat() -> None:
 
 install_configspace_normal_bounds_compat()
 
-NAS_RUNTIME_PACKAGE_ROOT = os.environ.get(
-    "NAS_RUNTIME_PACKAGE_ROOT",
-    "/hdd/xiaoyun/ProxyDARTS/Reproduction/nas_runtime",
-)
-REPRO_ROOT = os.environ.get("REPRO", "/hdd/xiaoyun/ProxyDARTS/Reproduction")
+NAS_RUNTIME_PACKAGE_ROOT = os.environ.get("NAS_RUNTIME_PACKAGE_ROOT")
+if not NAS_RUNTIME_PACKAGE_ROOT:
+    raise RuntimeError(
+        "NAS_RUNTIME_PACKAGE_ROOT must point to the parent directory of the "
+        "ZeroCostNAS runtime package."
+    )
 sys.path.insert(0, NAS_RUNTIME_PACKAGE_ROOT)
 
 
@@ -330,7 +331,10 @@ def summarize_artifact(path: Path, model, fixed_acc: np.ndarray, top_k: int):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--artifact_glob", default="/tmp/proxydiff_refinement_reeval/*score_params.pt")
-    ap.add_argument("--fixed_arch", default=os.path.join(REPRO_ROOT, "fixed_archs", "arch_dataset_20cell_c36.pt"))
+    ap.add_argument(
+        "--fixed_arch",
+        default=str(Path(__file__).resolve().parents[1] / "assets" / "arch_dataset_20cell_c36.pt"),
+    )
     ap.add_argument("--top_k", type=int, default=10)
     ap.add_argument("--out_json", required=True)
     args = ap.parse_args()

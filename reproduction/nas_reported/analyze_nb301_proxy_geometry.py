@@ -68,8 +68,6 @@ def main() -> None:
         raw,
         proxy_names,
         apply_gate=True,
-        cache_layout="readout_prior_axes",
-        cache_device="cpu",
     )
 
     raw_representation = rank_normalize_columns(raw)
@@ -82,7 +80,7 @@ def main() -> None:
             "n_dim": raw_representation.shape[1],
         },
         {
-            "representation": "factorized_prior_and_axes",
+            "representation": "factorized_axes",
             "mean_abs_spearman": mean_abs_spearman(factorized_representation),
             "effective_rank": effective_rank(factorized_representation),
             "n_dim": factorized_representation.shape[1],

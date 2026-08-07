@@ -3,10 +3,10 @@ set -euo pipefail
 
 GPU="${1:-0}"
 PACKAGE_ROOT="${PACKAGE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-OP_SCORE_ROOT="${OP_SCORE_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main/operation_scores}"
-MAIN_OUT_ROOT="${MAIN_OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_v2_main}"
-OUT_ROOT="${OUT_ROOT:-/hdd/xiaoyun/ProxyDiff_Repro/nb301_reported}"
-REFINEMENT_PY="${REFINEMENT_PY:-/hdd/xiaoyun/conda_envs/proxydarts-repro-zc18/bin/python}"
+OP_SCORE_ROOT="${OP_SCORE_ROOT:-${PACKAGE_ROOT}/reproduction/nas_v2/outputs/nb301_v2_main/operation_scores}"
+MAIN_OUT_ROOT="${MAIN_OUT_ROOT:-${PACKAGE_ROOT}/reproduction/nas_v2/outputs/nb301_v2_main}"
+OUT_ROOT="${OUT_ROOT:-${PACKAGE_ROOT}/reproduction/nas_v2/outputs/nb301_reported}"
+REFINEMENT_PY="${REFINEMENT_PY:-${PY:-python}}"
 AXIS_ARTIFACT="${AXIS_ARTIFACT:-${MAIN_OUT_ROOT}/full_proxy_pool_artifacts/axis_calibrated_selection.pt}"
 SUBSET_SUMMARY_CSV="${SUBSET_SUMMARY_CSV:-}"
 

@@ -22,17 +22,18 @@ import torchvision.transforms as transforms
 
 
 WORKTREE = Path(__file__).resolve().parents[3]
-ENV_DEP_ROOT = os.environ.get("PROXYDIFF_NAS_DEP_ROOT")
-if ENV_DEP_ROOT:
-    REPRO_ROOT = Path(ENV_DEP_ROOT).expanduser().resolve()
-elif (WORKTREE.parent / "upstream_zero_cost_pt").exists():
-    REPRO_ROOT = WORKTREE.parent
-elif (WORKTREE / "Reproduction" / "upstream_zero_cost_pt").exists():
-    REPRO_ROOT = WORKTREE / "Reproduction"
-else:
-    REPRO_ROOT = Path("/hdd/xiaoyun/ProxyDARTS/Reproduction")
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPRO_ROOT = Path(
+    os.environ.get("NAS_DEPENDENCY_ROOT", PACKAGE_ROOT / "dependencies")
+).expanduser().resolve()
 
 UPSTREAM = REPRO_ROOT / "upstream_zero_cost_pt"
+if not (UPSTREAM / "sota").is_dir():
+    raise RuntimeError(
+        "NB301 score dependencies are missing. Run "
+        "reproduction/nas_v2/scripts/setup_nb301_score_dependencies.sh or set "
+        "NAS_DEPENDENCY_ROOT to the prepared dependency directory."
+    )
 sys.path.insert(0, str(UPSTREAM))
 sys.path.insert(0, str(REPRO_ROOT))
 sys.path.insert(0, str(WORKTREE))
