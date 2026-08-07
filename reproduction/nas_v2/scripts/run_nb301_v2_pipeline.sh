@@ -272,7 +272,7 @@ PY
 }
 
 run_refinement full_proxy_pool full_proxy_pool 30 40 1.00 0.10 1.00
-run_refinement three_proxy_subset three_proxy_subset 30 40 0.75 0.10 1.00
+run_refinement budgeted_proxy_subset budgeted_proxy_subset 30 40 0.75 0.10 1.00
 
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/summarize_nb301_v2_results.py" \
   --out_root "$OUT_ROOT" \

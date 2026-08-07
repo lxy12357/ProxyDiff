@@ -15,12 +15,12 @@ BUNDLED_ROWS = [
     ("main_table", "full_proxy_pool_final_rank", 1.000000),
     ("main_table", "full_proxy_pool_score_gpu_hours", 6.538056),
     ("main_table", "full_proxy_pool_refinement_gpu_hours", 0.047500),
-    ("main_table", "three_proxy_subset_prior_acc", 94.022614),
-    ("main_table", "three_proxy_subset_axis_acc", 94.540970),
-    ("main_table", "three_proxy_subset_final_acc", 94.540970),
-    ("main_table", "three_proxy_subset_final_rank", 1.000000),
-    ("main_table", "three_proxy_subset_score_gpu_hours", 1.386667),
-    ("main_table", "three_proxy_subset_refinement_gpu_hours", 0.047778),
+    ("main_table", "budgeted_proxy_subset_prior_acc", 94.022614),
+    ("main_table", "budgeted_proxy_subset_axis_acc", 94.583778),
+    ("main_table", "budgeted_proxy_subset_final_acc", 94.583778),
+    ("main_table", "budgeted_proxy_subset_final_rank", 1.000000),
+    ("main_table", "budgeted_proxy_subset_score_gpu_hours", 1.386667),
+    ("main_table", "budgeted_proxy_subset_refinement_gpu_hours", 0.045556),
     ("refinement_trajectory", "score_prior_acc", 93.797127),
     ("refinement_trajectory", "axis_calibrated_selection_acc", 94.597778),
     ("refinement_trajectory", "component_corrected_refinement_acc", 94.640305),
@@ -50,7 +50,7 @@ def bundled_path() -> Path:
 def rows_from_v2_summary(summary_csv: Path) -> list[tuple[str, str, float]]:
     rows = {row["row"]: row for row in read_csv(summary_csv)}
     full = rows["full_proxy_pool"]
-    three = rows["three_proxy_subset"]
+    budget = rows["budgeted_proxy_subset"]
     return [
         ("main_table", "full_proxy_pool_prior_acc", float(full["prior_acc"])),
         ("main_table", "full_proxy_pool_axis_acc", float(full["axis_acc"])),
@@ -58,12 +58,12 @@ def rows_from_v2_summary(summary_csv: Path) -> list[tuple[str, str, float]]:
         ("main_table", "full_proxy_pool_final_rank", float(full["refinement_rank"])),
         ("main_table", "full_proxy_pool_score_gpu_hours", 6.538056),
         ("main_table", "full_proxy_pool_refinement_gpu_hours", 0.047500),
-        ("main_table", "three_proxy_subset_prior_acc", float(three["prior_acc"])),
-        ("main_table", "three_proxy_subset_axis_acc", float(three["axis_acc"])),
-        ("main_table", "three_proxy_subset_final_acc", float(three["refinement_acc"])),
-        ("main_table", "three_proxy_subset_final_rank", float(three["refinement_rank"])),
-        ("main_table", "three_proxy_subset_score_gpu_hours", 1.386667),
-        ("main_table", "three_proxy_subset_refinement_gpu_hours", 0.047778),
+        ("main_table", "budgeted_proxy_subset_prior_acc", float(budget["prior_acc"])),
+        ("main_table", "budgeted_proxy_subset_axis_acc", float(budget["axis_acc"])),
+        ("main_table", "budgeted_proxy_subset_final_acc", float(budget["refinement_acc"])),
+        ("main_table", "budgeted_proxy_subset_final_rank", float(budget["refinement_rank"])),
+        ("main_table", "budgeted_proxy_subset_score_gpu_hours", 1.386667),
+        ("main_table", "budgeted_proxy_subset_refinement_gpu_hours", 0.045556),
         ("refinement_trajectory", "score_prior_acc", float(full["prior_acc"])),
         ("refinement_trajectory", "axis_calibrated_selection_acc", float(full["axis_acc"])),
         ("refinement_trajectory", "component_corrected_refinement_acc", float(full["refinement_acc"])),

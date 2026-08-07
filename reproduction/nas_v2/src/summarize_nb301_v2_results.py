@@ -14,15 +14,15 @@ RUNS = {
         "file": "full_proxy_pool_free_decode.json",
         "axis_step": 30,
     },
-    "three_proxy_subset": {
-        "file": "three_proxy_subset_free_decode.json",
+    "budgeted_proxy_subset": {
+        "file": "budgeted_proxy_subset_free_decode.json",
         "axis_step": 30,
     },
 }
 
 REFERENCE_FINAL_ACCURACY = {
     "full_proxy_pool": 94.640305,
-    "three_proxy_subset": 94.540970,
+    "budgeted_proxy_subset": 94.583778,
 }
 REFERENCE_TOLERANCE = 0.001
 
@@ -77,21 +77,21 @@ def main() -> None:
         for run_id, cfg in RUNS.items()
     ]
     by_row = {row["row"]: row for row in summaries}
-    full_gt_three = (
+    full_gt_budget = (
         by_row["full_proxy_pool"]["refinement_acc"]
-        > by_row["three_proxy_subset"]["refinement_acc"]
+        > by_row["budgeted_proxy_subset"]["refinement_acc"]
     )
     for row in summaries:
         reference_match = (
             abs(row["refinement_acc"] - REFERENCE_FINAL_ACCURACY[row["row"]])
             <= REFERENCE_TOLERANCE
         )
-        row["full_final_acc_gt_three"] = full_gt_three
+        row["full_final_acc_gt_budget"] = full_gt_budget
         row["reference_final_acc_match"] = reference_match
         row["all_checks_passed"] = (
-            full_gt_three
+            full_gt_budget
             and by_row["full_proxy_pool"]["stagewise_rule_met"]
-            and by_row["three_proxy_subset"]["stagewise_rule_met"]
+            and by_row["budgeted_proxy_subset"]["stagewise_rule_met"]
             and all(
                 abs(item["refinement_acc"] - REFERENCE_FINAL_ACCURACY[item["row"]])
                 <= REFERENCE_TOLERANCE
@@ -109,7 +109,7 @@ def main() -> None:
         "refinement_rank",
         "stagewise_non_decreasing",
         "stagewise_rule_met",
-        "full_final_acc_gt_three",
+        "full_final_acc_gt_budget",
         "reference_final_acc_match",
         "all_checks_passed",
     ]

@@ -8,12 +8,13 @@ Fresh-score outputs verified on a CUDA GPU0 environment:
 | row | score prior | axis-calibrated selection | component-corrected refinement | rank path |
 |---|---:|---:|---:|---|
 | full proxy pool | 93.797127 | 94.597778 | 94.640305 | 144 -> 1 -> 1 |
-| 3-proxy subset | 94.022614 | 94.540970 | 94.540970 | 57 -> 1 -> 1 |
+| budgeted 4-proxy subset | 94.022614 | 94.583778 | 94.583778 | 57 -> 1 -> 1 |
 
-The full-pool row improves strictly at both refinement stages, the 3-proxy row
+The full-pool row improves strictly at both refinement stages, the budgeted row
 is non-decreasing, and the final full-pool result is higher than the final
-3-proxy result.
-The label-free 3-proxy gate selects `fisher`, `jacob`, and `synflow`.
+budgeted result.
+The label-free budget gate selects a `fisher`, `jacob`, and `synflow`
+backbone, then automatically admits `jacob_cov` as a complementary direction.
 
 Measured end-to-end row costs are `6.54 + 0.05` GPU-hours for the full pool
 and `1.39 + 0.05` GPU-hours for the budgeted row. The first term includes all
@@ -24,10 +25,11 @@ gate); the second term is cache construction, refinement, and free decoding.
 ## Pipeline
 
 1. Compute Zero-Cost-PT operation-ablation scores for the NB301 proxy pool.
-2. Build ProxyDiff score caches for the full proxy pool and the 3-proxy subset.
+2. Build ProxyDiff score caches for the full proxy pool and budgeted subset.
    The full pool retains a consensus core and admits efficient residual
    directions. The budgeted gate balances consensus support, effective rank,
-   and stable operation boundaries.
+   and operation-boundary margin, then admits residual directions using
+   effective-rank gain times operation-selection change.
 3. Run task-conditioned refinement.
 4. Free-decode and evaluate the selected NB301 architectures.
 
@@ -99,7 +101,7 @@ bash reproduction/nas_v2/scripts/run_nb301_v2_refine_from_cache.sh \
   full_proxy_pool /path/to/full_proxy_pool_proxydiff_cache.pt 0
 
 bash reproduction/nas_v2/scripts/run_nb301_v2_refine_from_cache.sh \
-  three_proxy_subset /path/to/three_proxy_subset_proxydiff_cache.pt 0
+  budgeted_proxy_subset /path/to/budgeted_proxy_subset_proxydiff_cache.pt 0
 ```
 
 Run the fixed-subset stability batch after operation scores are available:
@@ -122,7 +124,7 @@ The refine-from-cache launcher defaults to the verified v2 settings:
 | row | axis calibration steps | total training steps | residual axis scale | component correction lr | component correction scale |
 |---|---:|---:|---:|---:|---:|
 | full proxy pool | 30 | 40 | 1.00 | 0.10 | 1.00 |
-| 3-proxy subset | 30 | 40 | 0.75 | 0.10 | 1.00 |
+| budgeted proxy subset | 30 | 40 | 0.75 | 0.10 | 1.00 |
 
 The defaults use fixed rounded parameter values from a small reproduction grid
 and seed `9000`. The refinement sampler is also fixed to `9000`.

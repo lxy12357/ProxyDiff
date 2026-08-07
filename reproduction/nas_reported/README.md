@@ -109,8 +109,9 @@ Both launchers use seed `9000`, population size `50`, parent count `10`, five
 generations, 25 crossover children, and 25 mutation children. The search code
 is CPU-only by default because operation scores are already computed.
 
-The current paired main controls use `fisher,jacob,synflow` for the budgeted
-row and the admitted nine-proxy full set for the full row.
+The current paired main controls use `fisher,jacob,jacob_cov,synflow` for the
+automatically sized budgeted row and the admitted nine-proxy full set for the
+full row.
 
 ## Main-Table Rows
 
@@ -131,7 +132,7 @@ from the clean master logs:
 python reproduction/nas_reported/summarize_nb301_runtime.py \
   --score-master-log /path/to/score_master.log \
   --full-refinement-master-log /path/to/full_refinement_master.log \
-  --three-refinement-master-log /path/to/three_refinement_master.log \
+  --budget-refinement-master-log /path/to/budget_refinement_master.log \
   --output-csv /path/to/nb301_runtime.csv \
   --output-json /path/to/nb301_runtime.json
 ```
@@ -164,7 +165,7 @@ python reproduction/nas_reported/evaluate_nb301_balanced_pools.py \
   --reference-pool reproduction/nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json \
   --balanced-splits reproduction/nas_reported/evidence/balanced_pools/balanced3x1000_splits.json \
   --result full_proxy_pool=/path/to/full_proxy_pool_free_decode.json \
-  --result three_proxy_subset=/path/to/three_proxy_subset_free_decode.json \
+  --result budgeted_proxy_subset=/path/to/budgeted_proxy_subset_free_decode.json \
   --output-json /path/to/balanced_pool_results.json \
   --output-csv /path/to/balanced_pool_results.csv
 ```

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROXY_SET="${1:?full_proxy_pool or three_proxy_subset}"
+PROXY_SET="${1:?full_proxy_pool or budgeted_proxy_subset}"
 CACHE="${2:?path to *_proxydiff_cache.pt}"
 GPU="${3:-0}"
 
@@ -46,7 +46,7 @@ if [[ "$PROXY_SET" == "full_proxy_pool" ]]; then
   RESIDUAL_AXIS_SCALE="${RESIDUAL_AXIS_SCALE:-1.00}"
   COMPONENT_CORRECTION_LR="${COMPONENT_CORRECTION_LR:-0.10}"
   COMPONENT_CORRECTION_SCALE="${COMPONENT_CORRECTION_SCALE:-1.00}"
-elif [[ "$PROXY_SET" == "three_proxy_subset" ]]; then
+elif [[ "$PROXY_SET" == "budgeted_proxy_subset" ]]; then
   AXIS_CALIBRATION_STEPS="${AXIS_CALIBRATION_STEPS:-30}"
   TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-40}"
   RESIDUAL_AXIS_SCALE="${RESIDUAL_AXIS_SCALE:-0.75}"

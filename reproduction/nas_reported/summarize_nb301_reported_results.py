@@ -25,7 +25,7 @@ def decoded_metric(row: dict[str, object], key: str) -> float:
 
 def append_main_rows(rows: list[dict[str, object]], path: Path) -> None:
     by_name = {row["row"]: row for row in read_csv(path)}
-    for result_name in ("full_proxy_pool", "three_proxy_subset"):
+    for result_name in ("full_proxy_pool", "budgeted_proxy_subset"):
         result = by_name[result_name]
         for stage_name, value_key, rank_key in (
             ("score_prior", "prior_acc", "prior_rank"),

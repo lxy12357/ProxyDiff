@@ -26,9 +26,9 @@ def main():
     evaluated = rows_by(args.balanced_pool_csv, "label")
     runtimes = rows_by(args.runtime_csv, "proxy_set")
     mapping = [
-        ("ProxyDiff (3 proxy, ours)", "three_proxy_subset", "three_proxy_subset", "proxydiff"),
+        ("ProxyDiff (4 proxy, ours)", "budgeted_proxy_subset", "budgeted_proxy_subset", "proxydiff"),
         ("ProxyDiff (9 proxy, ours)", "full_proxy_pool", "full_proxy_pool", "proxydiff"),
-        ("AZ-NAS (3 proxy)", "az_three", "three_proxy_subset", "log_rank"),
+        ("AZ-NAS (4 proxy)", "az_budgeted", "budgeted_proxy_subset", "log_rank"),
         ("AZ-NAS (9 proxy)", "az_full", "full_proxy_pool", "log_rank"),
     ]
     rows = []
@@ -57,14 +57,14 @@ def main():
                 "cost_text": f"{score_hours:.2f}+{method_hours:.2f}",
             }
         )
-    three = next(row for row in rows if row["display_name"] == "ProxyDiff (3 proxy, ours)")
+    budget = next(row for row in rows if row["display_name"] == "ProxyDiff (4 proxy, ours)")
     output = {
         "definition": "current deterministic NB301 main rows evaluated on the frozen balanced3x1000 pools",
         "rows": rows,
         "intro_proxy_diff": {
-            "source_row": three["display_name"],
-            "accuracy": three["selected_accuracy"],
-            "total_gpu_hours": three["score_gpu_hours"] + three["method_gpu_hours"],
+            "source_row": budget["display_name"],
+            "accuracy": budget["selected_accuracy"],
+            "total_gpu_hours": budget["score_gpu_hours"] + budget["method_gpu_hours"],
         },
     }
     args.output_json.parent.mkdir(parents=True, exist_ok=True)

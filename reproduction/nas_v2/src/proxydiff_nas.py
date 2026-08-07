@@ -5,7 +5,8 @@ This script intentionally keeps only the paper-facing NB301 logic:
 
 1. Load operation-level proxy scores from `operation_scores.json`.
 2. Apply the label-free consensus/complement gate for the full proxy pool, or
-   select a balanced subset from short-running proxies.
+   select a balanced backbone and automatically admit useful complements from
+   short-running proxies.
 3. Rank-align the retained proxies and build whitened PCA axes.
 4. Orient axes by their strongest proxy profile and write the refinement cache.
 
@@ -300,6 +301,88 @@ def _balanced_subset_gate(
     }
 
 
+def _selection_change_complement_gate(
+    raw: np.ndarray,
+    proxy_names: list[str],
+    core_mask: np.ndarray,
+    *,
+    complement_keep_ratio: float = COMPLEMENT_KEEP_RATIO,
+    operation_topk_count: int = COMPLEMENT_OPERATION_TOPK_COUNT,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Admit new directions that materially change the operation selection."""
+    core_indices = [index for index in range(raw.shape[1]) if bool(core_mask[index])]
+    candidate_indices = [index for index in range(raw.shape[1]) if not bool(core_mask[index])]
+    if not candidate_indices:
+        return core_mask.copy(), {
+            "complement_keep_ratio": float(complement_keep_ratio),
+            "operation_topk_count": int(operation_topk_count),
+            "candidate_evidence": [],
+            "added_names": [],
+        }
+
+    aligned = _rank_align(raw)
+    core_rank = _effective_rank(aligned[:, core_indices])
+    core_names = [proxy_names[index] for index in core_indices]
+    core_readout = _factorized_readout(raw[:, core_indices], core_names)
+    core_operation_mask = _progressive_operation_mask(core_readout, operation_topk_count)
+
+    evidence = []
+    for candidate_index in candidate_indices:
+        joined_indices = sorted(core_indices + [candidate_index])
+        joined_names = [proxy_names[index] for index in joined_indices]
+        joined_readout = _factorized_readout(raw[:, joined_indices], joined_names)
+        joined_operation_mask = _progressive_operation_mask(
+            joined_readout,
+            operation_topk_count,
+        )
+        changed_fraction = _changed_operation_edge_fraction(
+            core_operation_mask,
+            joined_operation_mask,
+        )
+        rank_delta = max(
+            0.0,
+            _effective_rank(aligned[:, joined_indices]) - core_rank,
+        )
+        complement_score = rank_delta * changed_fraction
+        evidence.append({
+            "index": candidate_index,
+            "name": proxy_names[candidate_index],
+            "effective_rank_delta": rank_delta,
+            "changed_operation_edge_fraction": changed_fraction,
+            "complement_score": complement_score,
+        })
+
+    strongest = max(
+        (float(row["complement_score"]) for row in evidence),
+        default=0.0,
+    )
+    mask = core_mask.copy()
+    added_names = []
+    for row in evidence:
+        normalized = (
+            float(row["complement_score"]) / strongest
+            if strongest > 1e-12
+            else 0.0
+        )
+        passes = normalized >= float(complement_keep_ratio)
+        row["normalized_complement_score"] = normalized
+        row["passes_threshold"] = bool(passes)
+        if passes:
+            mask[int(row["index"])] = True
+            added_names.append(str(row["name"]))
+    return mask, {
+        "selection_rule": (
+            "effective-rank gain x changed-operation fraction"
+        ),
+        "complement_keep_ratio": float(complement_keep_ratio),
+        "operation_topk_count": int(operation_topk_count),
+        "core_effective_rank": core_rank,
+        "candidate_evidence": evidence,
+        "added_names": added_names,
+        "abstained": not added_names,
+    }
+
+
 def _novelty_efficiency_complement_gate(
     raw: np.ndarray,
     proxy_names: list[str],
@@ -437,15 +520,38 @@ def factorize_proxy_matrix(
     proxy_names: list[str],
     *,
     apply_gate: bool,
+    core_mask_override=None,
+    complement_admission_rule: str = "novelty_efficiency",
 ) -> tuple[list[np.ndarray], dict[str, object]]:
     gate_utilities = _proxy_utilities(_normalize_columns(raw))
     if apply_gate:
-        core_mask, reweighted, core_kept, core_dropped = _utility_gap_gate(gate_utilities)
-        mask, complement_meta = _novelty_efficiency_complement_gate(
-            raw,
-            proxy_names,
-            core_mask,
-        )
+        if core_mask_override is None:
+            core_mask, reweighted, core_kept, core_dropped = _utility_gap_gate(
+                gate_utilities
+            )
+        else:
+            core_mask = np.asarray(core_mask_override, dtype=bool).reshape(-1)
+            if core_mask.size != raw.shape[1] or not bool(np.any(core_mask)):
+                raise ValueError("core_mask_override must select columns from raw")
+            reweighted = gate_utilities
+            core_kept = [index for index in range(raw.shape[1]) if bool(core_mask[index])]
+            core_dropped = [index for index in range(raw.shape[1]) if not bool(core_mask[index])]
+        if complement_admission_rule == "novelty_efficiency":
+            mask, complement_meta = _novelty_efficiency_complement_gate(
+                raw,
+                proxy_names,
+                core_mask,
+            )
+        elif complement_admission_rule == "selection_change":
+            mask, complement_meta = _selection_change_complement_gate(
+                raw,
+                proxy_names,
+                core_mask,
+            )
+        else:
+            raise ValueError(
+                f"unknown complement_admission_rule={complement_admission_rule}"
+            )
         gate_kept = [index for index in range(raw.shape[1]) if bool(mask[index])]
         gate_dropped = [index for index in range(raw.shape[1]) if not bool(mask[index])]
         complement_indices = [index for index in gate_kept if not bool(core_mask[index])]
@@ -569,6 +675,7 @@ def factorize_proxy_matrix(
         "gate_utility_reweighted": reweighted.tolist(),
         "gate_stage1_kept_names": [proxy_names[i] for i in core_kept],
         "gate_stage1_dropped_names": [proxy_names[i] for i in core_dropped],
+        "complement_admission_rule": complement_admission_rule,
         "complement_admission": complement_meta,
         "gate_kept_names": [proxy_names[i] for i in gate_kept],
         "gate_dropped_names": [proxy_names[i] for i in gate_dropped],
@@ -636,7 +743,7 @@ def build_proxy_set(
     return details
 
 
-def build_balanced_three_proxy_set(
+def build_budgeted_proxy_set(
     op_root: Path,
     out_dir: Path,
     cache_device: str,
@@ -644,17 +751,20 @@ def build_balanced_three_proxy_set(
     raw, input_meta = load_operation_scores(op_root, SHORT_SCORE_PROXY_POOL)
     all_names = [f"zcpt_{name}" for name in SHORT_SCORE_PROXY_POOL]
     selected_indices, gate_meta = _balanced_subset_gate(raw, all_names)
-    selected_names = [all_names[index] for index in selected_indices]
+    core_mask = np.zeros(raw.shape[1], dtype=bool)
+    core_mask[selected_indices] = True
     vectors, factor_meta = factorize_proxy_matrix(
-        raw[:, selected_indices],
-        selected_names,
-        apply_gate=False,
+        raw,
+        all_names,
+        apply_gate=True,
+        core_mask_override=core_mask,
+        complement_admission_rule="selection_change",
     )
-    cache_path = out_dir / "three_proxy_subset_proxydiff_cache.pt"
+    cache_path = out_dir / "budgeted_proxy_subset_proxydiff_cache.pt"
     write_refinement_cache(cache_path, vectors, cache_device)
     details = {
-        "proxy_set": "three_proxy_subset",
-        "proxies": selected_names,
+        "proxy_set": "budgeted_proxy_subset",
+        "proxies": factor_meta["gate_kept_names"],
         "candidate_pool": all_names,
         "cache": str(cache_path),
         "output_cache_device": cache_device,
@@ -665,7 +775,7 @@ def build_balanced_three_proxy_set(
         "selection": gate_meta,
         "factorization": factor_meta,
     }
-    (out_dir / "three_proxy_subset_details.json").write_text(
+    (out_dir / "budgeted_proxy_subset_details.json").write_text(
         json.dumps(details, indent=2), encoding="utf-8"
     )
     return details
@@ -677,7 +787,7 @@ def main() -> None:
     parser.add_argument("--out-dir", required=True, type=Path)
     parser.add_argument(
         "--proxy-set",
-        choices=["full_proxy_pool", "three_proxy_subset", "both"],
+        choices=["full_proxy_pool", "budgeted_proxy_subset", "both"],
         default="both",
         help="Proxy set to convert into a ProxyDiff refinement cache.",
     )
@@ -736,8 +846,8 @@ def main() -> None:
                 cache_device=cache_device,
             )
         )
-    if args.proxy_set in {"three_proxy_subset", "both"}:
-        rows.append(build_balanced_three_proxy_set(args.op_root, args.out_dir, cache_device))
+    if args.proxy_set in {"budgeted_proxy_subset", "both"}:
+        rows.append(build_budgeted_proxy_set(args.op_root, args.out_dir, cache_device))
 
     manifest = {
         "description": "ProxyDiff NB301 caches generated from ZCPT operation-ablation scores",

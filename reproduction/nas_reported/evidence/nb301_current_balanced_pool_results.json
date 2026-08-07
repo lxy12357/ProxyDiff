@@ -19,18 +19,18 @@
       "balanced1000_a_rank": 2,
       "balanced1000_b_rank": 1,
       "balanced1000_c_rank": 1,
-      "label": "three_proxy_subset",
-      "selected_accuracy": 94.54096984863281,
-      "source_result": "run_output/three_proxy_subset_free_decode.json"
+      "label": "budgeted_proxy_subset",
+      "selected_accuracy": 94.58377838134766,
+      "source_result": "run_output/budgeted_proxy_subset_free_decode.json"
     },
     {
-      "average_rank": 48.666666666666664,
-      "balanced1000_a_rank": 50,
-      "balanced1000_b_rank": 48,
-      "balanced1000_c_rank": 48,
-      "label": "az_three",
-      "selected_accuracy": 93.93744659423828,
-      "source_result": "run_output/three_proxy_subset_log_rank.json"
+      "average_rank": 100.0,
+      "balanced1000_a_rank": 100,
+      "balanced1000_b_rank": 100,
+      "balanced1000_c_rank": 100,
+      "label": "az_budgeted",
+      "selected_accuracy": 93.78665924072266,
+      "source_result": "run_output/budgeted_proxy_subset_log_rank.json"
     },
     {
       "average_rank": 54.0,

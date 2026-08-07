@@ -13,7 +13,7 @@ from pathlib import Path
 
 TIMESTAMP = "%Y-%m-%d %H:%M:%S"
 SCORE_EVENT = re.compile(r"operation score (\S+) (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)")
-REFINEMENT_EVENT = re.compile(r"refine (full_proxy_pool|three_proxy_subset) (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)")
+REFINEMENT_EVENT = re.compile(r"refine (full_proxy_pool|budgeted_proxy_subset) (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)")
 REFINE_FROM_CACHE_EVENT = re.compile(
     r"refine-from-cache (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)"
 )
@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--score-master-log", type=Path, required=True)
     parser.add_argument("--full-refinement-master-log", type=Path, required=True)
-    parser.add_argument("--three-refinement-master-log", type=Path, required=True)
+    parser.add_argument("--budget-refinement-master-log", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
     return parser.parse_args()
@@ -73,7 +73,7 @@ def main():
             "grasp", "jacob", "jacob_cov", "l2_norm", "meco", "near",
             "nwot", "plain", "snip", "swap", "synflow", "te_nas", "zen", "zico",
         ],
-        "three_proxy_subset": [
+        "budgeted_proxy_subset": [
             "epe_nas", "epsinas", "eznas_darts", "fisher", "grad_norm",
             "jacob", "jacob_cov", "l2_norm", "near", "nwot", "plain",
             "snip", "synflow", "zico",
@@ -81,7 +81,9 @@ def main():
     }
     refinement = {
         "full_proxy_pool": stage_duration(args.full_refinement_master_log, "full_proxy_pool"),
-        "three_proxy_subset": stage_duration(args.three_refinement_master_log, "three_proxy_subset"),
+        "budgeted_proxy_subset": stage_duration(
+            args.budget_refinement_master_log, "budgeted_proxy_subset"
+        ),
     }
     rows = []
     for name, methods in sets.items():
