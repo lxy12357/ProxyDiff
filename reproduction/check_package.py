@@ -68,11 +68,15 @@ EXPECTED_SHA256 = {
         "852c3187ef2645469b52cfb94e9f6fa9e7b1859814f17727f181efe390c16f37"
     ),
     "nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json": (
-        "7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358"
+        "bde818818622d1d48719ff94c300553dd7e44d2bf8e29e43064bf5ba85e56a3f"
     ),
     "nas_reported/evidence/balanced_pools/balanced3x1000_splits.json": (
         "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624"
     ),
+}
+
+NORMALIZED_TEXT_ARTIFACTS = {
+    "nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json",
 }
 
 
@@ -170,7 +174,10 @@ def check_artifact_hashes(root: Path) -> int:
         path = root / rel_path
         if not path.exists():
             continue
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        content = path.read_bytes()
+        if rel_path in NORMALIZED_TEXT_ARTIFACTS:
+            content = content.replace(b"\r\n", b"\n")
+        actual = hashlib.sha256(content).hexdigest()
         if actual != expected:
             failures.append((rel_path, expected, actual))
     if failures:
