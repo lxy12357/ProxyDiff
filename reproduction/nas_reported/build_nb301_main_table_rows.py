@@ -26,9 +26,9 @@ def main():
     evaluated = rows_by(args.balanced_pool_csv, "label")
     runtimes = rows_by(args.runtime_csv, "proxy_set")
     mapping = [
-        ("ProxyDiff (4 proxy, ours)", "budgeted_proxy_subset", "budgeted_proxy_subset", "proxydiff"),
+        ("ProxyDiff (3 proxy, ours)", "budgeted_proxy_subset", "budgeted_proxy_subset", "proxydiff"),
         ("ProxyDiff (9 proxy, ours)", "full_proxy_pool", "full_proxy_pool", "proxydiff"),
-        ("AZ-NAS (4 proxy)", "az_budgeted", "budgeted_proxy_subset", "log_rank"),
+        ("AZ-NAS (3 proxy)", "az_budgeted", "budgeted_proxy_subset", "log_rank"),
         ("AZ-NAS (9 proxy)", "az_full", "full_proxy_pool", "log_rank"),
     ]
     rows = []
@@ -57,7 +57,7 @@ def main():
                 "cost_text": f"{score_hours:.2f}+{method_hours:.2f}",
             }
         )
-    budget = next(row for row in rows if row["display_name"] == "ProxyDiff (4 proxy, ours)")
+    budget = next(row for row in rows if row["display_name"] == "ProxyDiff (3 proxy, ours)")
     output = {
         "definition": "current deterministic NB301 main rows evaluated on the frozen balanced3x1000 pools",
         "rows": rows,

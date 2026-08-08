@@ -31,6 +31,7 @@ run_with_refinement_runtime "$REPORTED_DIR/build_nb301_component_ablation.py" \
 
 run_with_refinement_runtime "$NAS_V2_DIR/src/reevaluate_free_selected_arch.py" \
   --artifact_glob "$OUT_ROOT/prepared/direct_scores/*.pt" \
+  --fixed_arch "$FIXED_ARCH_FILE" \
   --top_k 10 \
   --out_json "$OUT_ROOT/direct_free_decode.json" \
   > "$OUT_ROOT/logs/direct_free_decode.log" 2>&1

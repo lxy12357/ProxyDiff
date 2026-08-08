@@ -6,8 +6,8 @@ main_table,full_proxy_pool_final_rank,1.000000
 main_table,full_proxy_pool_score_gpu_hours,6.538056
 main_table,full_proxy_pool_refinement_gpu_hours,0.047500
 main_table,budgeted_proxy_subset_prior_acc,94.022614
-main_table,budgeted_proxy_subset_axis_acc,94.583778
-main_table,budgeted_proxy_subset_final_acc,94.583778
+main_table,budgeted_proxy_subset_axis_acc,94.540970
+main_table,budgeted_proxy_subset_final_acc,94.540970
 main_table,budgeted_proxy_subset_final_rank,1.000000
 main_table,budgeted_proxy_subset_score_gpu_hours,1.386667
 main_table,budgeted_proxy_subset_refinement_gpu_hours,0.045556

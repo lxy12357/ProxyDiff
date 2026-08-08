@@ -47,6 +47,10 @@ run_subset_refinement() {
   local axis_steps="$3"
   local total_steps="$4"
   local residual_scale="$5"
+  if [[ -f "$OUT_ROOT/refine/${subset_id}/free_decode.json" ]]; then
+    echo "reuse completed subset: $subset_id" | tee -a "$MASTER_LOG"
+    return
+  fi
   build_subset_cache "$subset_id" "$proxy_names"
   OUT_ROOT="$OUT_ROOT/refine/${subset_id}" \
   AXIS_CALIBRATION_STEPS="$axis_steps" \

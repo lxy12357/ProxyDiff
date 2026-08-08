@@ -35,8 +35,8 @@ run_search() {
 }
 
 echo "===== NB301 paired control searches START $(date '+%F %T') =====" | tee "${OUTPUT_ROOT}/logs/master.log"
-run_search budgeted_proxy_subset "fisher,jacob,jacob_cov,synflow" log_rank
-run_search budgeted_proxy_subset "fisher,jacob,jacob_cov,synflow" mean_rank
+run_search budgeted_proxy_subset "fisher,jacob,synflow" log_rank
+run_search budgeted_proxy_subset "fisher,jacob,synflow" mean_rank
 run_search full_proxy_pool "jacob,l2_norm,meco,near,nwot,swap,synflow,zen,zico" log_rank
 run_search full_proxy_pool "jacob,l2_norm,meco,near,nwot,swap,synflow,zen,zico" mean_rank
 echo "===== NB301 paired control searches DONE $(date '+%F %T') =====" | tee -a "${OUTPUT_ROOT}/logs/master.log"

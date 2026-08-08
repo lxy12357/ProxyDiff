@@ -150,6 +150,7 @@ echo "$LATEST" > "$OUT_ROOT/latest_run_dir.txt"
 copy_refinement_artifacts "$LATEST" "$OUT_ROOT/artifacts" "$AXIS_CALIBRATION_STEPS"
 run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/reevaluate_free_selected_arch.py" \
   --artifact_glob "${LATEST}/*score_params.pt" \
+  --fixed_arch "$FIXED_ARCH_FILE" \
   --top_k 10 \
   --out_json "$OUT_ROOT/free_decode.json" \
   > "$LOG_ROOT/free_decode.log" 2>&1

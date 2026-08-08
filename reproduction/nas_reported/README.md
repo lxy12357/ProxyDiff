@@ -109,9 +109,9 @@ Both launchers use seed `9000`, population size `50`, parent count `10`, five
 generations, 25 crossover children, and 25 mutation children. The search code
 is CPU-only by default because operation scores are already computed.
 
-The current paired main controls use `fisher,jacob,jacob_cov,synflow` for the
-automatically sized budgeted row and the admitted nine-proxy full set for the
-full row.
+The current paired main controls use the hard-budget selection
+`fisher,jacob,synflow` for the budgeted row and the admitted nine-proxy full
+set for the full row.
 
 ## Main-Table Rows
 

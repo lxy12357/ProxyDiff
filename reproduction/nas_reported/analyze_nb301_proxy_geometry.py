@@ -17,6 +17,7 @@ NAS_V2_SRC = Path(__file__).resolve().parents[1] / "nas_v2" / "src"
 sys.path.insert(0, str(NAS_V2_SRC))
 
 from proxydiff_nas import (  # noqa: E402
+    FULL_PROXY_BUDGET,
     FULL_PROXY_POOL,
     _rankdata_average,
     _safe_corr,
@@ -68,6 +69,7 @@ def main() -> None:
         raw,
         proxy_names,
         apply_gate=True,
+        proxy_budget=FULL_PROXY_BUDGET,
     )
 
     raw_representation = rank_normalize_columns(raw)

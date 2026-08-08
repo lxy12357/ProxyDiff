@@ -4,8 +4,8 @@
 This script intentionally keeps only the paper-facing NB301 logic:
 
 1. Load operation-level proxy scores from `operation_scores.json`.
-2. Build a consensus backbone, compressing it only when the proxy budget
-   requires a smaller coreset, then apply one cross-cell complement gate.
+2. Build a consensus backbone, project it to a hard proxy budget when needed,
+   then admit reliable residual complements within the remaining budget.
 3. Rank-align the retained proxies and build whitened PCA axes.
 4. Orient axes by their strongest proxy profile and write the refinement cache.
 
@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import math
 from pathlib import Path
 from typing import Optional
 
@@ -78,8 +77,9 @@ AXIS_ORIENTATION_PROXIES = [
 
 COMPLEMENT_KEEP_RATIO = 0.9
 COMPLEMENT_OPERATION_TOPK_COUNT = 5
+REPEATED_STRUCTURE_CONFIDENCE_Z = 1.645
 FULL_PROXY_BUDGET = 9
-BUDGETED_PROXY_BUDGET = 4
+BUDGETED_PROXY_BUDGET = 3
 
 
 def _clean_name(name: str) -> str:
@@ -222,12 +222,28 @@ def _progressive_operation_mask(score: np.ndarray, top_k: int) -> np.ndarray:
     return mask
 
 
-def _changed_operation_edge_fraction(left: np.ndarray, right: np.ndarray) -> float:
-    changed = 0
+def _mean_operation_jaccard_drop(left: np.ndarray, right: np.ndarray) -> float:
+    drops = []
     for cell in range(left.shape[0]):
         for edge in range(left.shape[1]):
-            changed += int(not np.array_equal(left[cell, edge], right[cell, edge]))
-    return float(changed / (left.shape[0] * left.shape[1]))
+            left_ops = set(np.flatnonzero(left[cell, edge]))
+            right_ops = set(np.flatnonzero(right[cell, edge]))
+            union = left_ops | right_ops
+            drops.append(1.0 - len(left_ops & right_ops) / max(len(union), 1))
+    return float(np.mean(drops))
+
+
+def _conservative_correlation_reliability(
+    correlation: float,
+    sample_count: int,
+) -> tuple[float, float]:
+    clipped = float(np.clip(correlation, -0.999999, 0.999999))
+    standard_error = 1.0 / np.sqrt(max(sample_count - 3, 1))
+    lower_bound = float(np.tanh(
+        np.arctanh(clipped) - REPEATED_STRUCTURE_CONFIDENCE_Z * standard_error
+    ))
+    positive_lower_bound = max(lower_bound, 0.0)
+    return positive_lower_bound ** 2, lower_bound
 
 
 def _factorized_readout(raw: np.ndarray, proxy_names: list[str]) -> np.ndarray:
@@ -239,25 +255,10 @@ def _factorized_readout(raw: np.ndarray, proxy_names: list[str]) -> np.ndarray:
     return np.asarray(vectors[0], dtype=float)
 
 
-def _operation_boundary_margin(score: np.ndarray, top_k: int) -> float:
-    cells = np.asarray(score, dtype=float).reshape(2, 14, 7)
-    ordered = np.sort(cells, axis=2)[:, :, ::-1]
-    scale = np.maximum(np.std(cells, axis=2), 1e-12)
-    return float(np.mean((ordered[:, :, top_k - 1] - ordered[:, :, top_k]) / scale))
-
-
-def _percentile_ranks(values: list[float]) -> np.ndarray:
-    order = np.argsort(np.asarray(values, dtype=float), kind="mergesort")
-    ranks = np.empty(len(values), dtype=float)
-    ranks[order] = np.arange(1, len(values) + 1, dtype=float)
-    return ranks / float(len(values))
-
-
-def _balanced_subset_gate(
+def _consensus_rank_subset_gate(
     raw: np.ndarray,
     proxy_names: list[str],
-    subset_size: int = 3,
-    operation_topk_count: int = COMPLEMENT_OPERATION_TOPK_COUNT,
+    subset_size: int,
 ) -> tuple[list[int], dict[str, object]]:
     aligned = _rank_align(raw)
     utilities = _proxy_utilities(_normalize_columns(raw))
@@ -265,39 +266,25 @@ def _balanced_subset_gate(
     for indices_tuple in itertools.combinations(range(raw.shape[1]), subset_size):
         indices = list(indices_tuple)
         names = [proxy_names[index] for index in indices]
-        readout = _factorized_readout(raw[:, indices], names)
+        consensus_strength = float(np.mean(utilities[indices]))
+        rank_efficiency = _effective_rank(aligned[:, indices]) / subset_size
         rows.append({
             "indices": indices,
             "names": names,
-            "consensus_utility": float(np.mean(utilities[indices])),
-            "effective_rank": _effective_rank(aligned[:, indices]),
-            "operation_boundary_margin": _operation_boundary_margin(
-                readout, operation_topk_count
-            ),
+            "consensus_strength": consensus_strength,
+            "rank_efficiency": rank_efficiency,
+            "backbone_score": consensus_strength * rank_efficiency,
         })
-    metric_names = ["consensus_utility", "effective_rank", "operation_boundary_margin"]
-    percentiles = {
-        metric: _percentile_ranks([float(row[metric]) for row in rows])
-        for metric in metric_names
-    }
-    for row_index, row in enumerate(rows):
-        evidence = [float(percentiles[metric][row_index]) for metric in metric_names]
-        row["evidence_percentiles"] = dict(zip(metric_names, evidence))
-        row["balanced_bottleneck"] = min(evidence)
-        row["balanced_geometric_mean"] = float(
-            math.exp(sum(math.log(max(value, 1e-12)) for value in evidence) / len(evidence))
-        )
     rows.sort(key=lambda row: (
-        -float(row["balanced_bottleneck"]),
-        -float(row["balanced_geometric_mean"]),
+        -float(row["backbone_score"]),
+        -float(row["consensus_strength"]),
+        -float(row["rank_efficiency"]),
         row["names"],
     ))
     selected = list(rows[0]["indices"])
     return selected, {
         "subset_size": subset_size,
-        "operation_topk_count": operation_topk_count,
-        "selection_rule": "maximin evidence percentile with geometric-mean tie break",
-        "metrics": metric_names,
+        "selection_rule": "maximize consensus strength times effective-rank efficiency",
         "selected": rows[0],
         "top_candidates": rows[:10],
     }
@@ -308,21 +295,21 @@ def _select_budget_constrained_backbone(
     proxy_names: list[str],
     proxy_budget: int,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
-    """Retain the consensus core, compressing only when the budget requires it."""
-    if proxy_budget < 2:
-        raise ValueError("proxy_budget must reserve at least one backbone and one complement slot")
+    """Retain the consensus core, projecting it only when the hard budget requires it."""
+    if proxy_budget < 1:
+        raise ValueError("proxy_budget must retain at least one proxy")
 
     utilities = _proxy_utilities(_normalize_columns(raw))
     consensus_mask, reweighted, consensus_kept, consensus_dropped = _utility_gap_gate(
         utilities
     )
-    backbone_capacity = min(int(proxy_budget) - 1, raw.shape[1])
+    backbone_capacity = min(int(proxy_budget), raw.shape[1])
     if len(consensus_kept) <= backbone_capacity:
         backbone_mask = consensus_mask
         selected_indices = consensus_kept
         compression = None
     else:
-        selected_indices, compression = _balanced_subset_gate(
+        selected_indices, compression = _consensus_rank_subset_gate(
             raw,
             proxy_names,
             subset_size=backbone_capacity,
@@ -345,11 +332,12 @@ def _select_budget_constrained_backbone(
     }
 
 
-def _cross_cell_coherence_complement_gate(
+def _repeated_structure_complement_gate(
     raw: np.ndarray,
     proxy_names: list[str],
     core_mask: np.ndarray,
     *,
+    max_complements: int,
     complement_keep_ratio: float = COMPLEMENT_KEEP_RATIO,
     operation_topk_count: int = COMPLEMENT_OPERATION_TOPK_COUNT,
 ) -> tuple[np.ndarray, dict[str, object]]:
@@ -367,7 +355,6 @@ def _cross_cell_coherence_complement_gate(
     aligned = _rank_align(raw)
     core_aligned = aligned[:, core_indices]
     core_rank = _effective_rank(core_aligned)
-    core_rank_efficiency = core_rank / max(len(core_indices), 1)
     core_basis = _orthonormal_basis(core_aligned)
     core_names = [proxy_names[index] for index in core_indices]
     core_readout = _factorized_readout(raw[:, core_indices], core_names)
@@ -382,7 +369,7 @@ def _cross_cell_coherence_complement_gate(
             joined_readout,
             operation_topk_count,
         )
-        changed_fraction = _changed_operation_edge_fraction(
+        decision_change = _mean_operation_jaccard_drop(
             core_operation_mask,
             joined_operation_mask,
         )
@@ -419,21 +406,22 @@ def _cross_cell_coherence_complement_gate(
             for edge in range(residual_cells.shape[1])
         ]
         median_edge_correlation = float(np.median(paired_edge_correlations))
-        cross_cell_coherence = max(
-            global_cross_cell_correlation,
-            median_edge_correlation,
-            0.0,
+        repeated_structure_reliability, correlation_lower_bound = (
+            _conservative_correlation_reliability(
+                global_cross_cell_correlation,
+                residual_cells[0].size,
+            )
         )
         if (
             rank_delta > 0.0
-            and changed_fraction > 0.0
-            and cross_cell_coherence > 0.0
+            and decision_change > 0.0
+            and repeated_structure_reliability > 0.0
             and changes_both_cell_types
         ):
             complement_score = (
                 rank_delta
-                * changed_fraction ** core_rank_efficiency
-                * cross_cell_coherence ** (1.0 - core_rank_efficiency)
+                * decision_change
+                * repeated_structure_reliability
             )
         else:
             complement_score = 0.0
@@ -441,15 +429,17 @@ def _cross_cell_coherence_complement_gate(
             "index": candidate_index,
             "name": proxy_names[candidate_index],
             "effective_rank_delta": rank_delta,
-            "changed_operation_edge_fraction": changed_fraction,
+            "mean_operation_jaccard_drop": decision_change,
             "changes_both_cell_types": changes_both_cell_types,
             "global_cross_cell_spearman": global_cross_cell_correlation,
             "paired_edge_spearman": paired_edge_correlations,
             "median_paired_edge_spearman": median_edge_correlation,
-            "cross_cell_coherence": cross_cell_coherence,
+            "cross_cell_correlation_lower_bound": correlation_lower_bound,
+            "repeated_structure_reliability": repeated_structure_reliability,
             "complement_score": complement_score,
         })
 
+    evidence.sort(key=lambda row: (-float(row["complement_score"]), row["name"]))
     strongest = max(
         (float(row["complement_score"]) for row in evidence),
         default=0.0,
@@ -462,24 +452,31 @@ def _cross_cell_coherence_complement_gate(
             if strongest > 1e-12
             else 0.0
         )
-        passes = normalized >= float(complement_keep_ratio)
+        passes = (
+            float(row["complement_score"]) > 0.0
+            and normalized >= float(complement_keep_ratio)
+        )
+        admitted = passes and len(added_names) < max(0, int(max_complements))
         row["normalized_complement_score"] = normalized
-        row["passes_threshold"] = bool(passes)
-        if passes:
+        row["passes_relative_threshold"] = bool(passes)
+        row["admitted_within_budget"] = bool(admitted)
+        row["passes_threshold"] = bool(admitted)
+        if admitted:
             mask[int(row["index"])] = True
             added_names.append(str(row["name"]))
     return mask, {
         "selection_rule": (
-            "effective-rank gain x operation-change^core-rank-efficiency "
-            "x cross-cell-coherence^(1-core-rank-efficiency)"
+            "effective-rank gain x mean operation Jaccard change "
+            "x conservative repeated-structure reliability"
         ),
-        "cross_cell_coherence": (
-            "max(global cell Spearman, median paired-edge Spearman, 0)"
+        "repeated_structure_reliability": (
+            "squared positive one-sided 95% Fisher lower bound of the "
+            "normal/reduction cell Spearman correlation"
         ),
         "complement_keep_ratio": float(complement_keep_ratio),
+        "admission_capacity": max(0, int(max_complements)),
         "operation_topk_count": int(operation_topk_count),
         "core_effective_rank": core_rank,
-        "core_rank_efficiency": core_rank_efficiency,
         "candidate_evidence": evidence,
         "added_names": added_names,
         "abstained": not added_names,
@@ -547,7 +544,7 @@ def factorize_proxy_matrix(
     *,
     apply_gate: bool,
     proxy_budget: Optional[int] = None,
-    complement_admission_rule: str = "cross_cell_coherence",
+    complement_admission_rule: str = "repeated_structure_reliability",
 ) -> tuple[list[np.ndarray], dict[str, object]]:
     gate_utilities = _proxy_utilities(_normalize_columns(raw))
     if apply_gate:
@@ -560,11 +557,12 @@ def factorize_proxy_matrix(
         )
         core_kept = [index for index in range(raw.shape[1]) if bool(core_mask[index])]
         core_dropped = [index for index in range(raw.shape[1]) if not bool(core_mask[index])]
-        if complement_admission_rule == "cross_cell_coherence":
-            mask, complement_meta = _cross_cell_coherence_complement_gate(
+        if complement_admission_rule == "repeated_structure_reliability":
+            mask, complement_meta = _repeated_structure_complement_gate(
                 raw,
                 proxy_names,
                 core_mask,
+                max_complements=int(proxy_budget) - len(core_kept),
             )
         else:
             raise ValueError(
@@ -603,8 +601,14 @@ def factorize_proxy_matrix(
 
     prior = axes.mean(axis=1, keepdims=True)
     comp = np.column_stack([prior, axes])
-    proxy_lookup = {name: retained[:, i] for i, name in enumerate(retained_names)}
-    orient_names = [name for name in AXIS_ORIENTATION_PROXIES if name in proxy_lookup] or list(retained_names)
+    proxy_lookup = {
+        _clean_name(name): retained[:, i]
+        for i, name in enumerate(retained_names)
+    }
+    orientation_candidates = [_clean_name(name) for name in AXIS_ORIENTATION_PROXIES]
+    orient_names = [
+        name for name in orientation_candidates if name in proxy_lookup
+    ] or list(proxy_lookup)
 
     profiles = []
     pre_oriented_axes = []
@@ -777,7 +781,7 @@ def build_budgeted_proxy_set(
         all_names,
         apply_gate=True,
         proxy_budget=BUDGETED_PROXY_BUDGET,
-        complement_admission_rule="cross_cell_coherence",
+        complement_admission_rule="repeated_structure_reliability",
     )
     cache_path = out_dir / "budgeted_proxy_subset_proxydiff_cache.pt"
     write_refinement_cache(cache_path, vectors, cache_device)

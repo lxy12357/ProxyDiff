@@ -251,7 +251,7 @@ run_refinement() {
   run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/collect_refinement_summaries.py" "$run_name" > "$LOG_ROOT/collect_${run_label}.log" 2>&1
 
   local latest
-  latest="$(python3 - "$run_name" <<'PY'
+  latest="$("$REFINEMENT_PY" - "$run_name" <<'PY'
 import glob
 import os
 import sys
@@ -267,6 +267,7 @@ PY
   copy_refinement_artifacts "$latest" "$OUT_ROOT/${run_label}_artifacts" "$axis_calibration_steps"
   run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" "$REFINEMENT_PY" "$NAS_SRC_DIR/reevaluate_free_selected_arch.py" \
     --artifact_glob "${latest}/*score_params.pt" \
+    --fixed_arch "$FIXED_ARCH_FILE" \
     --top_k 10 \
     --out_json "$OUT_ROOT/${run_label}_free_decode.json" \
     > "$LOG_ROOT/free_decode_${run_label}.log" 2>&1
