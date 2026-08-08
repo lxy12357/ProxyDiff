@@ -13,10 +13,10 @@ Fresh-score outputs verified on a CUDA GPU0 environment:
 The full-pool row improves strictly at both refinement stages, the budgeted row
 is non-decreasing, and the final full-pool result is higher than the final
 budgeted result.
-Both rows use one label-free hard-budget gate. With budget 9, it retains
+Both rows use one label-free gate. In the unconstrained full pool, it retains
 the consensus backbone (`l2_norm`, `nwot`, `zen`, `zico`, `near`, `jacob`,
-`swap`, `meco`) and admits `synflow`. With budget 3, the same budgeted backbone
-objective selects `fisher`, `jacob`, and `synflow`.
+`swap`, `meco`) and automatically admits `synflow`. With budget 3, the same
+budgeted backbone objective selects `fisher`, `jacob`, and `synflow`.
 
 Measured end-to-end row costs are `6.54 + 0.05` GPU-hours for the full pool
 and `1.39 + 0.05` GPU-hours for the budgeted row. The first term includes all

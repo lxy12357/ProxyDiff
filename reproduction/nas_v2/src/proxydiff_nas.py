@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -64,21 +65,9 @@ SHORT_SCORE_PROXY_POOL = [
     "zico",
 ]
 
-AXIS_ORIENTATION_PROXIES = [
-    "zcpt_jacob",
-    "zcpt_nwot",
-    "zcpt_near",
-    "zcpt_meco",
-    "zcpt_swap",
-    "zcpt_l2_norm",
-    "zcpt_zen",
-    "zcpt_zico",
-]
-
 COMPLEMENT_KEEP_RATIO = 0.9
 COMPLEMENT_OPERATION_TOPK_COUNT = 5
 REPEATED_STRUCTURE_CONFIDENCE_Z = 1.645
-FULL_PROXY_BUDGET = 9
 BUDGETED_PROXY_BUDGET = 3
 
 
@@ -201,7 +190,9 @@ def _effective_rank(matrix: np.ndarray) -> float:
     total = float(eigenvalues.sum())
     if total <= 1e-12:
         return 0.0
-    return float(total * total / max(float(eigenvalues @ eigenvalues), 1e-12))
+    probabilities = eigenvalues / total
+    positive = probabilities[probabilities > 1e-12]
+    return float(math.exp(-float(np.sum(positive * np.log(positive)))))
 
 
 def _orthonormal_basis(matrix: np.ndarray) -> np.ndarray:
@@ -483,30 +474,6 @@ def _repeated_structure_complement_gate(
     }
 
 
-def _cluster_profiles(profiles: list[tuple[int, np.ndarray]], threshold: float = 0.6) -> list[dict[str, object]]:
-    clusters: list[list[tuple[int, np.ndarray]]] = []
-    for axis, profile in profiles:
-        placed = False
-        for cluster in clusters:
-            centroid = np.mean([p for _axis, p in cluster], axis=0)
-            denom = float(np.linalg.norm(profile) * np.linalg.norm(centroid))
-            sim = 0.0 if denom <= 1e-12 else float(np.dot(profile, centroid) / denom)
-            if abs(sim) >= threshold:
-                cluster.append((axis, profile))
-                placed = True
-                break
-        if not placed:
-            clusters.append([(axis, profile)])
-    return [
-        {
-            "cluster_id": int(i),
-            "axes": [int(axis) for axis, _profile in cluster],
-            "centroid": np.mean([profile for _axis, profile in cluster], axis=0).tolist(),
-        }
-        for i, cluster in enumerate(clusters)
-    ]
-
-
 def load_operation_scores(op_root: Path, proxies: list[str]) -> tuple[np.ndarray, dict[str, object]]:
     vectors = []
     metadata = {}
@@ -548,13 +515,14 @@ def factorize_proxy_matrix(
 ) -> tuple[list[np.ndarray], dict[str, object]]:
     gate_utilities = _proxy_utilities(_normalize_columns(raw))
     if apply_gate:
-        if proxy_budget is None:
-            raise ValueError("proxy_budget is required when apply_gate=True")
+        selection_capacity = raw.shape[1] if proxy_budget is None else int(proxy_budget)
         core_mask, reweighted, backbone_meta = _select_budget_constrained_backbone(
             raw,
             proxy_names,
-            proxy_budget,
+            selection_capacity,
         )
+        backbone_meta["budget_mode"] = "automatic" if proxy_budget is None else "hard"
+        backbone_meta["configured_proxy_budget"] = proxy_budget
         core_kept = [index for index in range(raw.shape[1]) if bool(core_mask[index])]
         core_dropped = [index for index in range(raw.shape[1]) if not bool(core_mask[index])]
         if complement_admission_rule == "repeated_structure_reliability":
@@ -562,7 +530,7 @@ def factorize_proxy_matrix(
                 raw,
                 proxy_names,
                 core_mask,
-                max_complements=int(proxy_budget) - len(core_kept),
+                max_complements=selection_capacity - len(core_kept),
             )
         else:
             raise ValueError(
@@ -605,12 +573,8 @@ def factorize_proxy_matrix(
         _clean_name(name): retained[:, i]
         for i, name in enumerate(retained_names)
     }
-    orientation_candidates = [_clean_name(name) for name in AXIS_ORIENTATION_PROXIES]
-    orient_names = [
-        name for name in orientation_candidates if name in proxy_lookup
-    ] or list(proxy_lookup)
+    orient_names = list(proxy_lookup)
 
-    profiles = []
     pre_oriented_axes = []
     oriented_axes = []
     axis_meta = []
@@ -619,7 +583,6 @@ def factorize_proxy_matrix(
         strongest_idx = int(np.argmax(np.abs(profile))) if profile.size else 0
         direction = 1.0 if profile.size == 0 or profile[strongest_idx] >= 0 else -1.0
         oriented_profile = direction * profile
-        profiles.append((axis_id, oriented_profile))
         pre_oriented_axes.append(comp[:, axis_id])
         oriented_axes.append(comp[:, axis_id] * direction)
         axis_meta.append(
@@ -703,9 +666,6 @@ def factorize_proxy_matrix(
         "complement_admission": complement_meta,
         "gate_kept_names": [proxy_names[i] for i in gate_kept],
         "gate_dropped_names": [proxy_names[i] for i in gate_dropped],
-        "dedup_min_size": 999,
-        "dedup_applied_once": False,
-        "dedup_representatives": [proxy_names[i] for i in gate_kept],
         "align": "rank",
         "transform": "rank_aligned_whitened_pc_axes",
         "shared_basis": "projected_columns",
@@ -714,7 +674,6 @@ def factorize_proxy_matrix(
         "n_axes": len(axes_only),
         "n_cache_metrics": len(cache_vectors),
         "orientation_proxy_order": orient_names,
-        "profile_clusters": _cluster_profiles(profiles, threshold=0.6),
         "oriented_axes": axis_meta,
         "refinement_axes": refinement_axis_meta,
         "residual_complement_axes": residual_complements,
@@ -866,7 +825,7 @@ def main() -> None:
                 "full_proxy_pool",
                 FULL_PROXY_POOL,
                 apply_gate=True,
-                proxy_budget=FULL_PROXY_BUDGET,
+                proxy_budget=None,
                 cache_device=cache_device,
             )
         )
