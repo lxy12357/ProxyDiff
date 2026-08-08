@@ -13,8 +13,10 @@ Fresh-score outputs verified on a CUDA GPU0 environment:
 The full-pool row improves strictly at both refinement stages, the budgeted row
 is non-decreasing, and the final full-pool result is higher than the final
 budgeted result.
-The label-free budget gate selects a `fisher`, `jacob`, and `synflow`
-backbone, then automatically admits `jacob_cov` as a complementary direction.
+Both rows use one label-free budget-constrained gate. With budget 9, it retains
+the consensus backbone (`l2_norm`, `nwot`, `zen`, `zico`, `near`, `jacob`,
+`swap`, `meco`) and admits `synflow`. With budget 4, it compresses the backbone
+to `fisher`, `jacob`, and `synflow`, then admits `jacob_cov`.
 
 Measured end-to-end row costs are `6.54 + 0.05` GPU-hours for the full pool
 and `1.39 + 0.05` GPU-hours for the budgeted row. The first term includes all
@@ -26,10 +28,13 @@ gate); the second term is cache construction, refinement, and free decoding.
 
 1. Compute Zero-Cost-PT operation-ablation scores for the NB301 proxy pool.
 2. Build ProxyDiff score caches for the full proxy pool and budgeted subset.
-   The full pool retains a consensus core and admits efficient residual
-   directions. The budgeted gate balances consensus support, effective rank,
-   and operation-boundary margin, then admits residual directions using
-   effective-rank gain times operation-selection change.
+   The largest-gap consensus core is retained when it fits the proxy budget;
+   otherwise it is compressed to a balanced score-only coreset. A single
+   complement rule then combines conditional effective-rank gain, operation
+   selection impact, and normal/reduction-cell coherence. The retained core's
+   effective-rank efficiency supplies the bounded geometric mixing weight.
+   Candidates are retained when their normalized complement score is at least
+   `0.9` and they affect both cell types.
 3. Run task-conditioned refinement.
 4. Free-decode and evaluate the selected NB301 architectures.
 
@@ -63,9 +68,19 @@ conda env create -n proxydiff-nas-zico \
   -f reproduction/nas_v2/environment-zico.yml
 ```
 
+Create the pinned refinement environment separately:
+
+```bash
+conda env create -n proxydiff-nas-refinement \
+  -f reproduction/nas_v2/environment-refinement.yml
+```
+
 Set the Python executables for the standard score, ZiCo score, and refinement
-environments. `REFINEMENT_LD_LIBRARY_PATH` is optional and is needed only when
-the refinement environment does not find its CUDA libraries automatically.
+environments. The verified refinement trajectory uses Python `3.7.16`, PyTorch
+`1.8.0+cu111`, and torchvision `0.9.0+cu111`; changing this runtime can alter
+the learned refinement trajectory even when the score cache and seed are
+identical. `REFINEMENT_LD_LIBRARY_PATH` is optional and is needed only when the
+refinement environment does not find its CUDA libraries automatically.
 
 ## End-to-End Run
 
@@ -162,6 +177,7 @@ python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
   score computation. `src/run_nb301_zcpt_operation_scores.py` is the stable
   launcher used by the shell pipeline.
 - `src/verify_zico_runtime.py`: pinned ZiCo CUDA runtime check.
+- `src/verify_refinement_runtime.py`: exact NB301 refinement runtime check.
 - `src/proxydiff_nas.py`: proxy score alignment, factorization, and cache
   writer.
 - `src/run_nb301_proxy_refinement.py`: clean wrapper around the NB301
@@ -176,5 +192,6 @@ python reproduction/nas_v2/src/summarize_nb301_v2_reported_results.py \
 - `src/summarize_nb301_v2_subset_results.py`: fixed-subset stability parser.
 - `configs/`: refinement config template.
 - `environment-zico.yml`: pinned deterministic ZiCo score runtime.
+- `environment-refinement.yml`: pinned NB301 refinement runtime.
 - `assets/arch_dataset_20cell_c36.pt`: fixed NB301 architecture pool used by
   every main-table and control row.

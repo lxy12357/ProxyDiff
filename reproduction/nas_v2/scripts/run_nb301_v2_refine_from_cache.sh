@@ -75,6 +75,9 @@ run_with_optional_ld() {
   fi
 }
 
+run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" \
+  "$REFINEMENT_PY" "$NAS_SRC_DIR/verify_refinement_runtime.py"
+
 copy_refinement_artifacts() {
   local latest="$1"
   local artifact_dir="$2"

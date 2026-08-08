@@ -191,6 +191,9 @@ if [[ ! -d "$NAS_RUNTIME_PACKAGE_ROOT/ZeroCostNAS" ]]; then
   exit 2
 fi
 
+run_with_optional_ld "$REFINEMENT_LD_LIBRARY_PATH" \
+  "$REFINEMENT_PY" "$NAS_SRC_DIR/verify_refinement_runtime.py"
+
 echo "===== build ProxyDiff NB301 caches $(date '+%F %T') =====" | tee -a "$LOG_ROOT/master.log"
 export FIXED_ARCH_FILE
 export NAS_RUNTIME_PACKAGE_ROOT
