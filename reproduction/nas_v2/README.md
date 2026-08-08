@@ -13,11 +13,8 @@ Fresh-score outputs verified on a CUDA GPU0 environment:
 The full-pool row improves strictly at both refinement stages, the budgeted row
 is non-decreasing, and the final full-pool result is higher than the final
 budgeted result.
-One label-free adaptive gate is used for both rows. It compares a
-coverage-preserving consensus proposal with a compact balanced proposal using
-consensus-utility coverage, effective rank, and operation-boundary margin.
-The full pool selects a 9-proxy coverage proposal; the short-score pool selects
-a `fisher`, `jacob`, and `synflow` backbone and admits `jacob_cov`.
+The label-free budget gate selects a `fisher`, `jacob`, and `synflow`
+backbone, then automatically admits `jacob_cov` as a complementary direction.
 
 Measured end-to-end row costs are `6.54 + 0.05` GPU-hours for the full pool
 and `1.39 + 0.05` GPU-hours for the budgeted row. The first term includes all
@@ -28,11 +25,11 @@ gate); the second term is cache construction, refinement, and free decoding.
 ## Pipeline
 
 1. Compute Zero-Cost-PT operation-ablation scores for the NB301 proxy pool.
-2. Build ProxyDiff score caches with the shared adaptive gate. It constructs
-   coverage-preserving and compact-balanced core proposals, admits residual
-   complements with a core-rank-adaptive operation-change criterion, and keeps
-   the proposal maximizing utility coverage times effective rank times
-   operation-boundary margin.
+2. Build ProxyDiff score caches for the full proxy pool and budgeted subset.
+   The full pool retains a consensus core and admits efficient residual
+   directions. The budgeted gate balances consensus support, effective rank,
+   and operation-boundary margin, then admits residual directions using
+   effective-rank gain times operation-selection change.
 3. Run task-conditioned refinement.
 4. Free-decode and evaluate the selected NB301 architectures.
 
