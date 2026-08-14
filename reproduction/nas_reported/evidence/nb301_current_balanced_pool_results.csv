@@ -1,5 +1,5 @@
-label,selected_accuracy,balanced1000_a_rank,balanced1000_b_rank,balanced1000_c_rank,average_rank,source_result
-full_proxy_pool,94.64030456542969,2,1,1,1.3333333333333333,run_output/full_proxy_pool_free_decode.json
-budgeted_proxy_subset,94.54096984863281,2,1,1,1.3333333333333333,run_output/budgeted_proxy_subset_free_decode.json
-az_budgeted,93.93744659423828,50,48,48,48.666666666666664,run_output/budgeted_proxy_subset_log_rank.json
-az_full,93.90751647949219,54,54,54,54.0,run_output/full_proxy_pool_log_rank.json
+"label","selected_accuracy","balanced1000_a_rank","balanced1000_b_rank","balanced1000_c_rank","average_rank","source_result"
+"full_proxy_pool","94.75977325439453","1","1","1","1.0","evidence/artifacts/main/full_proxy_pool_free_decode.json"
+"budgeted_proxy_subset","94.63880920410156","2","1","1","1.3333333333333333","evidence/artifacts/main/budgeted_proxy_subset_free_decode.json"
+"az_budgeted","93.77168273925781","105","106","106","105.66666666666667","evidence/artifacts/controls/budgeted_log_rank.json"
+"az_full","93.90751647949219","54","54","54","54.0","evidence/artifacts/controls/full_log_rank.json"

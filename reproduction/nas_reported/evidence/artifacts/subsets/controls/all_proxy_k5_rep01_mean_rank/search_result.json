@@ -1,0 +1,504 @@
+{
+  "aggregation": "mean_rank",
+  "crossover_count": 25,
+  "definition": "NB301 evolution with population-relative operation-proxy rank aggregation",
+  "evaluated_unique": 200,
+  "generation_count": 5,
+  "history": [
+    {
+      "best_architecture": [
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      ],
+      "best_score": -9.3,
+      "evaluated_unique": 50,
+      "generation": 0
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      ],
+      "best_score": -20.8,
+      "evaluated_unique": 91,
+      "generation": 1
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ]
+      ],
+      "best_score": -26.4,
+      "evaluated_unique": 131,
+      "generation": 2
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            6
+          ]
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ]
+      ],
+      "best_score": -28.5,
+      "evaluated_unique": 172,
+      "generation": 3
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ]
+      ],
+      "best_score": -33.1,
+      "evaluated_unique": 200,
+      "generation": 4
+    }
+  ],
+  "input_metadata": {
+    "eznas_darts": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_eznas_darts/operation_scores.json",
+      "predictor": "official_zcpt_eznas_darts",
+      "protocol_revision": "cell_local_v2_20260605"
+    },
+    "grad_norm": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_grad_norm/operation_scores.json",
+      "predictor": "official_zcpt_grad_norm",
+      "protocol_revision": "cell_local_v2_20260605"
+    },
+    "meco": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_meco/operation_scores.json",
+      "predictor": "official_zcpt_meco",
+      "protocol_revision": "cell_local_operation_ablation_20260605"
+    },
+    "near": {
+      "batch_size": 8,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_near/operation_scores.json",
+      "predictor": "official_zcpt_near",
+      "protocol_revision": "cell_local_operation_ablation_20260605"
+    },
+    "plain": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_plain/operation_scores.json",
+      "predictor": "official_zcpt_plain",
+      "protocol_revision": "cell_local_v2_20260605"
+    }
+  },
+  "mutation_count": 25,
+  "mutation_rate": 0.1,
+  "operation_score_root": "formal_inputs/operation_scores",
+  "parent_count": 10,
+  "population_size": 50,
+  "proxy_names": [
+    "eznas_darts",
+    "grad_norm",
+    "meco",
+    "near",
+    "plain"
+  ],
+  "seed": 9000,
+  "selected_accuracy": 93.38108825683594,
+  "selected_architecture": [
+    [
+      [
+        1,
+        5
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        6
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        4,
+        2
+      ]
+    ]
+  ],
+  "selected_fixed_pool_rank": 412,
+  "selected_genotype": "Genotype(normal=[('dil_conv_3x3', 1), ('skip_connect', 0), ('avg_pool_3x3', 2), ('skip_connect', 1), ('sep_conv_3x3', 1), ('skip_connect', 0), ('max_pool_3x3', 1), ('avg_pool_3x3', 0)], normal_concat=[2, 3, 4, 5], reduce=[('avg_pool_3x3', 0), ('max_pool_3x3', 1), ('avg_pool_3x3', 0), ('dil_conv_5x5', 2), ('dil_conv_3x3', 2), ('avg_pool_3x3', 1), ('max_pool_3x3', 0), ('skip_connect', 4)], reduce_concat=[2, 3, 4, 5])",
+  "selected_score": -33.1,
+  "wall_time_seconds": 24.62801718711853
+}

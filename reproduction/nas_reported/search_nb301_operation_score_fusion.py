@@ -232,7 +232,7 @@ def finite_score(item) -> float:
 def load_nb301_model(runtime_root: Path):
     package_root = runtime_root.parent if runtime_root.name == "ZeroCostNAS" else runtime_root
     os.environ["NAS_RUNTIME_PACKAGE_ROOT"] = str(package_root)
-    evaluator_source = Path(__file__).resolve().parents[1] / "nas_v2" / "src"
+    evaluator_source = Path(__file__).resolve().parents[1] / "nas" / "src"
     sys.path.insert(0, str(evaluator_source))
     from reevaluate_free_selected_arch import get_nasbench301_api
 

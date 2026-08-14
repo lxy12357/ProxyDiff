@@ -12,8 +12,8 @@ import numpy as np
 import torch
 
 
-NAS_V2_SRC = Path(__file__).resolve().parents[1] / "nas_v2" / "src"
-sys.path.insert(0, str(NAS_V2_SRC))
+NAS_SRC = Path(__file__).resolve().parents[1] / "nas" / "src"
+sys.path.insert(0, str(NAS_SRC))
 
 from proxydiff_nas import FULL_PROXY_POOL, load_operation_scores  # noqa: E402
 
@@ -74,20 +74,34 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--op-score-root", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument(
+        "--selection-details",
+        type=Path,
+        required=True,
+        help="Full-pool ProxyDiff details JSON that defines the retained multi-proxy set.",
+    )
     args = parser.parse_args()
 
-    proxy_names = [f"zcpt_{name}" for name in FULL_PROXY_POOL]
-    raw, input_metadata = load_operation_scores(args.op_score_root, FULL_PROXY_POOL)
-    ranked = rank_normalize_columns(raw)
+    all_proxy_names = [f"zcpt_{name}" for name in FULL_PROXY_POOL]
+    all_raw, input_metadata = load_operation_scores(args.op_score_root, FULL_PROXY_POOL)
+    all_ranked = rank_normalize_columns(all_raw)
+
+    selection = json.loads(args.selection_details.read_text(encoding="utf-8"))
+    retained_proxy_names = selection["factorization"]["gate_kept_names"]
+    if not retained_proxy_names:
+        raise ValueError("selection details contain no retained proxies")
+    retained_pool = [name[5:] if name.startswith("zcpt_") else name for name in retained_proxy_names]
+    retained_raw, retained_metadata = load_operation_scores(args.op_score_root, retained_pool)
+    retained_ranked = rank_normalize_columns(retained_raw)
 
     direct_dir = args.out_dir / "direct_scores"
     direct_rows = []
-    for index, proxy_name in enumerate(proxy_names):
+    for index, proxy_name in enumerate(all_proxy_names):
         method = f"single_{proxy_name}"
         artifact = direct_dir / f"{method}.pt"
         save_score_artifact(
             artifact,
-            ranked[:, index],
+            all_ranked[:, index],
             method,
             "single rank-normalized operation-level proxy",
         )
@@ -96,25 +110,28 @@ def main() -> None:
     raw_mean_artifact = direct_dir / "raw_multi_proxy_mean.pt"
     save_score_artifact(
         raw_mean_artifact,
-        ranked.mean(axis=1),
+        retained_ranked.mean(axis=1),
         "raw_multi_proxy_mean",
-        "uniform mean of rank-normalized operation-level proxies",
+        "uniform mean of the same retained rank-normalized proxies used by ProxyDiff",
     )
     direct_rows.append({"name": "raw_multi_proxy_mean", "artifact": str(raw_mean_artifact)})
 
     raw_cache = args.out_dir / "raw_multi_proxy_refinement_cache.pt"
-    save_raw_refinement_cache(raw_cache, ranked)
+    save_raw_refinement_cache(raw_cache, retained_ranked)
 
     manifest = {
         "operation_score_root": str(args.op_score_root),
-        "proxy_names": proxy_names,
+        "single_proxy_candidate_names": all_proxy_names,
+        "retained_multi_proxy_names": retained_proxy_names,
+        "selection_details": str(args.selection_details),
         "direct_score_artifacts": direct_rows,
         "raw_refinement_cache": str(raw_cache),
         "cache_layout": {
             "metric_0": "uniform raw-proxy rank mean",
-            "correction_metrics": proxy_names,
+            "correction_metrics": retained_proxy_names,
         },
         "input_metadata": input_metadata,
+        "retained_input_metadata": retained_metadata,
     }
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "component_ablation_manifest.json").write_text(

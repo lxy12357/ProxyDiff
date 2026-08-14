@@ -7,10 +7,11 @@ import argparse
 import csv
 import json
 from pathlib import Path
+from statistics import median
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
+    with path.open(newline="", encoding="utf-8-sig") as handle:
         return list(csv.DictReader(handle))
 
 
@@ -21,6 +22,13 @@ def read_decode_rows(path: Path) -> list[dict[str, object]]:
 def decoded_metric(row: dict[str, object], key: str) -> float:
     selected = row.get("free_top_score_arch") or {}
     return float(selected[key])
+
+
+def source_label(path: Path) -> str:
+    parts = path.parts
+    if "evidence" in parts:
+        return Path(*parts[parts.index("evidence") :]).as_posix()
+    return path.as_posix()
 
 
 def append_main_rows(rows: list[dict[str, object]], path: Path) -> None:
@@ -37,7 +45,7 @@ def append_main_rows(rows: list[dict[str, object]], path: Path) -> None:
                     "group": "main_and_trajectory",
                     "name": f"{result_name}_{stage_name}_acc",
                     "value": float(result[value_key]),
-                    "source": str(path),
+                    "source": source_label(path),
                 }
             )
             rows.append(
@@ -45,7 +53,7 @@ def append_main_rows(rows: list[dict[str, object]], path: Path) -> None:
                     "group": "main_and_trajectory",
                     "name": f"{result_name}_{stage_name}_rank",
                     "value": float(result[rank_key]),
-                    "source": str(path),
+                    "source": source_label(path),
                 }
             )
 
@@ -71,7 +79,7 @@ def append_component_rows(
             "group": "component_ablation",
             "name": "best_single_proxy_name",
             "value": str(best_single["method"])[len("single_zcpt_") :],
-            "source": str(direct_decode),
+            "source": source_label(direct_decode),
         }
     )
     values = [
@@ -81,7 +89,14 @@ def append_component_rows(
         ("factorized_full_acc", float(full["refinement_acc"]), main_summary),
     ]
     for name, value, source in values:
-        rows.append({"group": "component_ablation", "name": name, "value": value, "source": str(source)})
+        rows.append(
+            {
+                "group": "component_ablation",
+                "name": name,
+                "value": value,
+                "source": source_label(source),
+            }
+        )
 
 
 def append_geometry_rows(rows: list[dict[str, object]], path: Path) -> None:
@@ -93,13 +108,38 @@ def append_geometry_rows(rows: list[dict[str, object]], path: Path) -> None:
                     "group": "proxy_geometry",
                     "name": f"{prefix}_{key}",
                     "value": float(geometry[key]),
-                    "source": str(path),
+                    "source": source_label(path),
                 }
             )
 
 
 def append_subset_rows(rows: list[dict[str, object]], path: Path) -> None:
-    for subset in read_csv(path):
+    subset_rows = read_csv(path)
+    if subset_rows and {"protocol", "accuracy"}.issubset(subset_rows[0]):
+        for pool in ("retained_pool", "full_proxy_pool"):
+            for subset_size in (3, 5):
+                values = [
+                    float(row["accuracy"])
+                    for row in subset_rows
+                    if row["pool"] == pool
+                    and int(row["subset_size"]) == subset_size
+                    and row["protocol"] == "proxydiff"
+                ]
+                if len(values) != 3:
+                    raise ValueError(
+                        f"expected three ProxyDiff rows for {pool} k={subset_size}, "
+                        f"found {len(values)}"
+                    )
+                rows.append(
+                    {
+                        "group": "subset_stability",
+                        "name": f"{pool}_k{subset_size}_median_acc",
+                        "value": median(values),
+                        "source": source_label(path),
+                    }
+                )
+        return
+    for subset in subset_rows:
         if subset.get("subset_id") != "summary_median" or subset.get("status") != "ok":
             continue
         prefix = f"{subset['pool']}_k{int(subset['subset_size'])}"
@@ -108,7 +148,7 @@ def append_subset_rows(rows: list[dict[str, object]], path: Path) -> None:
                 "group": "subset_stability",
                 "name": f"{prefix}_median_acc",
                 "value": float(subset["final_acc"]),
-                "source": str(path),
+                "source": source_label(path),
             }
         )
         rows.append(
@@ -116,13 +156,23 @@ def append_subset_rows(rows: list[dict[str, object]], path: Path) -> None:
                 "group": "subset_stability",
                 "name": f"{prefix}_median_rank",
                 "value": float(subset["final_rank"]),
-                "source": str(path),
+                "source": source_label(path),
             }
         )
 
 
-def bundled_evidence_path() -> Path:
-    return Path(__file__).resolve().parent / "evidence" / "nb301_reported_results_summary.csv"
+def append_runtime_rows(rows: list[dict[str, object]], path: Path) -> None:
+    for runtime in read_csv(path):
+        proxy_set = runtime["proxy_set"]
+        for key in ("score_gpu_hours", "refinement_gpu_hours", "total_gpu_hours"):
+            rows.append(
+                {
+                    "group": "runtime",
+                    "name": f"{proxy_set}_{key}",
+                    "value": float(runtime[key]),
+                    "source": source_label(path),
+                }
+            )
 
 
 def write_rows(rows: list[dict[str, object]], path: Path | None) -> None:
@@ -140,39 +190,34 @@ def write_rows(rows: list[dict[str, object]], path: Path | None) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--main-summary-csv", type=Path, default=None)
+    parser.add_argument("--main-summary-csv", type=Path, required=True)
     parser.add_argument("--component-direct-json", type=Path, default=None)
     parser.add_argument("--raw-refinement-json", type=Path, default=None)
-    parser.add_argument("--geometry-csv", type=Path, default=None)
+    parser.add_argument("--geometry-csv", type=Path, required=True)
     parser.add_argument("--subset-summary-csv", type=Path, default=None)
+    parser.add_argument("--runtime-csv", type=Path, required=True)
     parser.add_argument("--out-csv", type=Path, default=None)
     args = parser.parse_args()
 
-    supplied = [
-        args.main_summary_csv,
-        args.component_direct_json,
-        args.raw_refinement_json,
-        args.geometry_csv,
-        args.subset_summary_csv,
-    ]
     rows: list[dict[str, object]] = []
-    if not any(supplied):
-        rows = read_csv(bundled_evidence_path())
-    else:
-        if args.main_summary_csv is not None:
-            append_main_rows(rows, args.main_summary_csv)
-        component_inputs = (args.component_direct_json, args.raw_refinement_json, args.main_summary_csv)
-        if any(component_inputs) and not all(component_inputs):
-            parser.error(
-                "component summary requires --component-direct-json, --raw-refinement-json, "
-                "and --main-summary-csv"
-            )
-        if all(component_inputs):
-            append_component_rows(rows, *component_inputs)
-        if args.geometry_csv is not None:
-            append_geometry_rows(rows, args.geometry_csv)
-        if args.subset_summary_csv is not None:
-            append_subset_rows(rows, args.subset_summary_csv)
+    append_main_rows(rows, args.main_summary_csv)
+    component_inputs = (args.component_direct_json, args.raw_refinement_json)
+    if any(component_inputs) and not all(component_inputs):
+        parser.error(
+            "component summary requires both --component-direct-json and "
+            "--raw-refinement-json"
+        )
+    if all(component_inputs):
+        append_component_rows(
+            rows,
+            args.component_direct_json,
+            args.raw_refinement_json,
+            args.main_summary_csv,
+        )
+    append_geometry_rows(rows, args.geometry_csv)
+    if args.subset_summary_csv is not None:
+        append_subset_rows(rows, args.subset_summary_csv)
+    append_runtime_rows(rows, args.runtime_csv)
 
     write_rows(rows, args.out_csv)
 

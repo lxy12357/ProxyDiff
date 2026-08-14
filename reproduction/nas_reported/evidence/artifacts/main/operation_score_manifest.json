@@ -1,0 +1,207 @@
+{
+  "accepted_protocol_revisions": {
+    "scalar": [
+      "cell_local_operation_ablation_20260605",
+      "cell_local_v2_20260605"
+    ],
+    "te_nas": [
+      "cell_local_tenas_delta_20260612",
+      "cell_local_tenas_delta_v1_20260612"
+    ]
+  },
+  "fixed_arch_sha256": "852c3187ef2645469b52cfb94e9f6fa9e7b1859814f17727f181efe390c16f37",
+  "protocol": "zcpt_single_op_ablation_prior_8cell_c16",
+  "scores": [
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "epe_nas",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_epe_nas/operation_scores.json",
+      "predictor": "official_zcpt_epe_nas",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "36fa1366c585c4d63b06afde9b7f0475d81fbed3e797a771057bb13754f221a2"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "epsinas",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_epsinas/operation_scores.json",
+      "predictor": "official_zcpt_epsinas",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "a4c983a44196396c9554d8c4da0d3db3348bd102f8823ace199ad48360b99caa"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "eznas_darts",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_eznas_darts/operation_scores.json",
+      "predictor": "official_zcpt_eznas_darts",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "25eb58a67459cd1ab8053fd9144cf14ff0cab51f4f023d8d84803e5930b3e74d"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "fisher",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_fisher/operation_scores.json",
+      "predictor": "official_zcpt_fisher",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "dc7eb3f4592c04d2950b7e0c00c695ea7e80a59865111adedb580fa22b66dcab"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "grad_norm",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_grad_norm/operation_scores.json",
+      "predictor": "official_zcpt_grad_norm",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "44451489d3b2217fdd891b8b29f69e6648ee8abb89d5aaffe2b9b58d3e220993"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "grasp",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_grasp/operation_scores.json",
+      "predictor": "official_zcpt_grasp",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "d06e8ed10df4100c4e5be81b33f9f34854b2f444e061693fc76eb483462719e0"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "jacob",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_jacob/operation_scores.json",
+      "predictor": "official_zcpt_jacob",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "994434ce096255566803128ba0ea8eaf564f28bd7d1abd86b34e4da74e990912"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "jacob_cov",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_jacob_cov/operation_scores.json",
+      "predictor": "official_zcpt_jacob_cov",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "ffb7ffb3de341e7ca0f89699930a26696c331048708320c7a60c664360976eae"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "l2_norm",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_l2_norm/operation_scores.json",
+      "predictor": "official_zcpt_l2_norm",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "3e8db24eabccd598272e3f8703b771d53ec22e0072d7f14cd8783f6e6bba92ed"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "meco",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_meco/operation_scores.json",
+      "predictor": "official_zcpt_meco",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "6a3b9bd09ce5b0a984c521c6dc95568db2d9664a642c726e8a7e824873dd471d"
+    },
+    {
+      "batch_size": 8,
+      "candidate_count": 196,
+      "method": "near",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_near/operation_scores.json",
+      "predictor": "official_zcpt_near",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "458dfc814036ae38f93cfae2bb10abd7966b598aaba0a8cc5fedb887ad52a0a3"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "nwot",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_nwot/operation_scores.json",
+      "predictor": "official_zcpt_nwot",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "f38112e6298d6b7272ebb1559b1243a0284772d24cae03aa05f70b341ae0e98f"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "plain",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_plain/operation_scores.json",
+      "predictor": "official_zcpt_plain",
+      "protocol_revision": "cell_local_v2_20260605",
+      "seed": 9000,
+      "sha256": "b9c6d20682d36e640501aa46492e16efdab600debf6c9cb13d94927b283b687a"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "snip",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_snip/operation_scores.json",
+      "predictor": "official_zcpt_snip",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "fc63b9f0da3f3fc977244ba0d6bf544e5a159705c8d24215390f522f7fab1270"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "swap",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_swap/operation_scores.json",
+      "predictor": "official_zcpt_swap",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "bd8a50e59c8813fa9fd4ec9d946a95ef59562c4af60bdf4c3491cc437adfa25f"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "synflow",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_synflow/operation_scores.json",
+      "predictor": "official_zcpt_synflow",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "270a4816314dc9e6c2da8072a6480c11ff77f650d71bd03009fba806448dc723"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "te_nas",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_te_nas/operation_scores.json",
+      "predictor": "official_zcpt_te_nas",
+      "protocol_revision": "cell_local_tenas_delta_v1_20260612",
+      "seed": 9000,
+      "sha256": "818d99566c0a40b86c0b593ca050e2092a1873d8e3d062507c818559661f0a6d"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "zen",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_zen/operation_scores.json",
+      "predictor": "official_zcpt_zen",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "55b0c8f684c1f8d071cb4eafe5f116b9251bd620929431bbcda3a18f0b401d6c"
+    },
+    {
+      "batch_size": 64,
+      "candidate_count": 196,
+      "method": "zico",
+      "path": "evidence/artifacts/operation_scores/nb301_zcpt_zico/operation_scores.json",
+      "predictor": "official_zcpt_zico",
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "seed": 9000,
+      "sha256": "58461d3cd8f5d23454abea2f6c899aaff5fd51479c0c71d9d1896305433e3a34"
+    }
+  ],
+  "seed": 9000
+}

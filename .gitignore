@@ -1,3 +1,4 @@
 __pycache__/
 *.py[cod]
-reproduction/nas_v2/dependencies/
+reproduction/nas/dependencies/
+/tmp/

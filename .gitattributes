@@ -1,11 +1,3 @@
-* text=auto
-
-*.sh text eol=lf
-*.py text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.json text eol=lf
-*.jsonl text eol=lf
-*.md text eol=lf
-*.csv text eol=lf
-reproduction/nas_reported/evidence/balanced_pools/balanced3x1000_splits.json -text -diff !eol
+# Hash-locked reproduction sources and evidence must survive clone/archive byte-for-byte.
+reproduction/nas/runtime/ZeroCostNAS/** -text
+reproduction/nas_reported/evidence/artifacts/** -text

@@ -10,47 +10,41 @@ from pathlib import Path
 from statistics import median
 
 
-SUBSETS = {
-    "retained_k3_rep01": ("retained_pool", 3, ["near", "zen", "zico"]),
-    "retained_k3_rep02": ("retained_pool", 3, ["jacob", "meco", "near"]),
-    "retained_k3_rep03": ("retained_pool", 3, ["jacob", "l2_norm", "zico"]),
-    "retained_k5_rep01": ("retained_pool", 5, ["jacob", "meco", "nwot", "swap", "zico"]),
-    "retained_k5_rep02": ("retained_pool", 5, ["l2_norm", "near", "nwot", "swap", "zico"]),
-    "retained_k5_rep03": ("retained_pool", 5, ["l2_norm", "meco", "nwot", "swap", "zico"]),
-    "all_proxy_k3_rep01": ("full_proxy_pool", 3, ["meco", "snip", "swap"]),
-    "all_proxy_k3_rep02": ("full_proxy_pool", 3, ["jacob", "meco", "plain"]),
-    "all_proxy_k3_rep03": ("full_proxy_pool", 3, ["grad_norm", "jacob", "zen"]),
-    "all_proxy_k5_rep01": ("full_proxy_pool", 5, ["eznas_darts", "grad_norm", "meco", "near", "plain"]),
-    "all_proxy_k5_rep02": ("full_proxy_pool", 5, ["epsinas", "eznas_darts", "grasp", "jacob", "meco"]),
-    "all_proxy_k5_rep03": ("full_proxy_pool", 5, ["eznas_darts", "fisher", "meco", "nwot", "zen"]),
-}
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--proxydiff-root", type=Path, required=True)
     parser.add_argument("--control-root", type=Path, required=True)
+    parser.add_argument("--subset-manifest", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, required=True)
+    parser.add_argument("--output-summary-csv", type=Path, default=None)
     return parser.parse_args()
 
 
-def proxydiff_accuracy(path: Path) -> float:
+def proxydiff_result(path: Path) -> tuple[float, int]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    matches = [row for row in payload["rows"] if "epoch_000_score_params" in row.get("method", "")]
+    matches = [row for row in payload["rows"] if row.get("method") == "proxydiff_epoch_000_score_params"]
     if len(matches) != 1:
-        raise ValueError(f"expected one final ProxyDiff row in {path}, found {len(matches)}")
-    return float(matches[0]["free_top_score_arch"]["acc"])
+        raise ValueError(f"expected one component-correction endpoint in {path}, found {len(matches)}")
+    final_row = matches[0]
+    selected = final_row["free_top_score_arch"]
+    return float(selected["acc"]), int(selected["equiv_fixed1000_rank"])
 
 
-def control_accuracy(path: Path) -> float:
-    return float(json.loads(path.read_text(encoding="utf-8"))["selected_accuracy"])
+def control_result(path: Path) -> tuple[float, int]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return float(payload["selected_accuracy"]), int(payload["selected_fixed_pool_rank"])
 
 
 def main():
     args = parse_args()
+    manifest = json.loads(args.subset_manifest.read_text(encoding="utf-8"))
     rows = []
-    for subset_id, (pool, size, proxy_names) in SUBSETS.items():
+    for subset in manifest["subsets"]:
+        subset_id = str(subset["subset_id"])
+        pool = str(subset["pool"])
+        size = int(subset["subset_size"])
+        proxy_names = list(subset["proxy_names"])
         sources = {
             "proxydiff": args.proxydiff_root / subset_id / "free_decode.json",
             "log_rank": args.control_root / f"{subset_id}_log_rank" / "search_result.json",
@@ -59,7 +53,10 @@ def main():
         for protocol, source in sources.items():
             if not source.exists():
                 raise FileNotFoundError(source)
-            accuracy = proxydiff_accuracy(source) if protocol == "proxydiff" else control_accuracy(source)
+            if protocol == "proxydiff":
+                accuracy, rank = proxydiff_result(source)
+            else:
+                accuracy, rank = control_result(source)
             rows.append(
                 {
                     "pool": pool,
@@ -68,7 +65,8 @@ def main():
                     "proxy_names": ",".join(proxy_names),
                     "protocol": protocol,
                     "accuracy": accuracy,
-                    "source_result": str(source),
+                    "rank": rank,
+                    "source_result": source.as_posix(),
                 }
             )
     summaries = []
@@ -80,6 +78,11 @@ def main():
                     for row in rows
                     if row["pool"] == pool and row["subset_size"] == size and row["protocol"] == protocol
                 ]
+                ranks = [
+                    int(row["rank"])
+                    for row in rows
+                    if row["pool"] == pool and row["subset_size"] == size and row["protocol"] == protocol
+                ]
                 summaries.append(
                     {
                         "pool": pool,
@@ -88,9 +91,10 @@ def main():
                         "minimum_accuracy": min(values),
                         "median_accuracy": median(values),
                         "maximum_accuracy": max(values),
+                        "median_rank": median(ranks),
                     }
                 )
-    fields = ["pool", "subset_size", "subset_id", "proxy_names", "protocol", "accuracy", "source_result"]
+    fields = ["pool", "subset_size", "subset_id", "proxy_names", "protocol", "accuracy", "rank", "source_result"]
     args.output_csv.parent.mkdir(parents=True, exist_ok=True)
     with args.output_csv.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields)
@@ -98,11 +102,48 @@ def main():
         writer.writerows(rows)
     output = {
         "definition": "fixed subset comparison with identical proxy sets across rank-mean, AZ-style log-rank, and ProxyDiff",
+        "subset_manifest": str(args.subset_manifest),
+        "subset_seed": manifest["seed"],
         "rows": rows,
         "summaries": summaries,
     }
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
+    if args.output_summary_csv is not None:
+        by_key = {(row["pool"], row["subset_size"], row["protocol"]): row for row in summaries}
+        summary_fields = [
+            "source_pool",
+            "subset_size",
+            "rank_mean_median",
+            "log_rank_median",
+            "proxydiff_median",
+            "proxydiff_min",
+            "proxydiff_max",
+            "proxydiff_median_rank",
+        ]
+        summary_rows = []
+        for pool in ["retained_pool", "full_proxy_pool"]:
+            for size in [3, 5]:
+                rank_mean = by_key[(pool, size, "rank_mean")]
+                log_rank = by_key[(pool, size, "log_rank")]
+                proxydiff = by_key[(pool, size, "proxydiff")]
+                summary_rows.append(
+                    {
+                        "source_pool": pool,
+                        "subset_size": size,
+                        "rank_mean_median": rank_mean["median_accuracy"],
+                        "log_rank_median": log_rank["median_accuracy"],
+                        "proxydiff_median": proxydiff["median_accuracy"],
+                        "proxydiff_min": proxydiff["minimum_accuracy"],
+                        "proxydiff_max": proxydiff["maximum_accuracy"],
+                        "proxydiff_median_rank": proxydiff["median_rank"],
+                    }
+                )
+        args.output_summary_csv.parent.mkdir(parents=True, exist_ok=True)
+        with args.output_summary_csv.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.DictWriter(stream, fieldnames=summary_fields)
+            writer.writeheader()
+            writer.writerows(summary_rows)
     print(json.dumps(summaries, indent=2))
 
 

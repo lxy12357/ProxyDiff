@@ -1,0 +1,1332 @@
+{
+  "proxy_set": "budgeted_proxy_subset",
+  "proxies": [
+    "zcpt_jacob",
+    "zcpt_snip",
+    "zcpt_zico"
+  ],
+  "candidate_pool": [
+    "zcpt_epe_nas",
+    "zcpt_epsinas",
+    "zcpt_eznas_darts",
+    "zcpt_fisher",
+    "zcpt_grad_norm",
+    "zcpt_jacob",
+    "zcpt_jacob_cov",
+    "zcpt_l2_norm",
+    "zcpt_near",
+    "zcpt_nwot",
+    "zcpt_plain",
+    "zcpt_snip",
+    "zcpt_synflow",
+    "zcpt_zico"
+  ],
+  "cache": "evidence/artifacts/cache/budgeted_proxy_subset_proxydiff_cache.pt",
+  "cache_sha256": "959ba4599d423dfd716a8b098769efa6f4c9e8daf26b0040fb00530d15f894b3",
+  "output_cache_device": "cuda",
+  "n_metrics": 4,
+  "metric0": "consensus_aligned_axis_mean",
+  "correction_columns": [
+    "axis_1",
+    "axis_2",
+    "axis_3"
+  ],
+  "input_meta": {
+    "zcpt_epe_nas": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_epe_nas/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_epsinas": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_epsinas/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_eznas_darts": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_eznas_darts/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_fisher": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_fisher/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_grad_norm": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_grad_norm/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_jacob": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_jacob/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Jacob component score: ablate one candidate op in the projected DARTS supernet, compute the official Zero-Cost-PT Jocab_Score summed over normal and reduce cells, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op, matching the other scalar ZCPT proxies; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_jacob_cov": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_jacob_cov/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_l2_norm": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_l2_norm/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "L2 component score: official parameter L2 norm of the candidate op module, summed across all projected DARTS cells of the requested cell_type. This is the parameter-space equivalent of neutral_supernet_score - score_after_removing_one_candidate_op; runtime forward masks are not used because they do not delete parameters."
+    },
+    "zcpt_near": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_near/operation_scores.json",
+      "batch_size": 8,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_nwot": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_nwot/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "NWOT component score: ablate one candidate op in the projected DARTS supernet, compute the standalone NASWOT/NWOT ReLU activation-kernel logdet on the whole model, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op; architecture score = sum selected edge-op operation scores. This row is a projected ZCPT-supernet NWOT proxy and is separate from official Zero-Cost-PT's Jocab_Score row named zcpt_jacob."
+    },
+    "zcpt_plain": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_plain/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_snip": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_snip/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_synflow": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_synflow/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_zico": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zico/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    }
+  },
+  "selection": {
+    "proxy_budget": 3,
+    "backbone_capacity": 3,
+    "consensus_core_names": [
+      "zcpt_jacob",
+      "zcpt_l2_norm",
+      "zcpt_nwot",
+      "zcpt_near",
+      "zcpt_zico",
+      "zcpt_snip",
+      "zcpt_grad_norm"
+    ],
+    "consensus_dropped_names": [
+      "zcpt_fisher",
+      "zcpt_plain",
+      "zcpt_synflow",
+      "zcpt_epsinas",
+      "zcpt_jacob_cov",
+      "zcpt_epe_nas",
+      "zcpt_eznas_darts"
+    ],
+    "backbone_names": [
+      "zcpt_jacob",
+      "zcpt_snip",
+      "zcpt_zico"
+    ],
+    "backbone_dropped_names": [
+      "zcpt_epe_nas",
+      "zcpt_epsinas",
+      "zcpt_eznas_darts",
+      "zcpt_fisher",
+      "zcpt_grad_norm",
+      "zcpt_jacob_cov",
+      "zcpt_l2_norm",
+      "zcpt_near",
+      "zcpt_nwot",
+      "zcpt_plain",
+      "zcpt_synflow"
+    ],
+    "intrinsic_effective_rank": 6.417023854040627,
+    "stage1_group_effective_ranks": [
+      5.755400953747958,
+      7.078646754333297
+    ],
+    "stage1_mean_effective_rank": 6.417023854040627,
+    "intrinsic_core_count": 7,
+    "selected_core_count": 3,
+    "stage1_utility_rule": "mean absolute rank correlation within each structural group, then equal mean across groups",
+    "cardinality_rule": "ceiling of mean group spectral effective rank, followed by budget-constrained consensus-rank coreset when required",
+    "compressed_to_budget": true,
+    "compression": {
+      "subset_size": 3,
+      "selection_rule": "maximize consensus strength times effective-rank efficiency",
+      "selected": {
+        "indices": [
+          0,
+          4,
+          5
+        ],
+        "names": [
+          "zcpt_jacob",
+          "zcpt_zico",
+          "zcpt_snip"
+        ],
+        "consensus_strength": 0.5043536126985143,
+        "rank_efficiency": 0.7554941631697533,
+        "backbone_score": 0.3810362105673059
+      },
+      "top_candidates": [
+        {
+          "indices": [
+            0,
+            4,
+            5
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_zico",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.5043536126985143,
+          "rank_efficiency": 0.7554941631697533,
+          "backbone_score": 0.3810362105673059
+        },
+        {
+          "indices": [
+            0,
+            4,
+            6
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_zico",
+            "zcpt_grad_norm"
+          ],
+          "consensus_strength": 0.49739300665694364,
+          "rank_efficiency": 0.7580913621363186,
+          "backbone_score": 0.3770693419336414
+        },
+        {
+          "indices": [
+            3,
+            4,
+            5
+          ],
+          "names": [
+            "zcpt_near",
+            "zcpt_zico",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.49057764754135436,
+          "rank_efficiency": 0.7685912875541745,
+          "backbone_score": 0.37705370576910757
+        },
+        {
+          "indices": [
+            2,
+            4,
+            5
+          ],
+          "names": [
+            "zcpt_nwot",
+            "zcpt_zico",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.5040920507445669,
+          "rank_efficiency": 0.7435628151007915,
+          "backbone_score": 0.37482410432156116
+        },
+        {
+          "indices": [
+            0,
+            1,
+            5
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_l2_norm",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.5086018831249165,
+          "rank_efficiency": 0.7340447845251362,
+          "backbone_score": 0.37333655970750784
+        },
+        {
+          "indices": [
+            3,
+            4,
+            6
+          ],
+          "names": [
+            "zcpt_near",
+            "zcpt_zico",
+            "zcpt_grad_norm"
+          ],
+          "consensus_strength": 0.48361704149978363,
+          "rank_efficiency": 0.7703747286772075,
+          "backbone_score": 0.3725663471290696
+        },
+        {
+          "indices": [
+            2,
+            4,
+            6
+          ],
+          "names": [
+            "zcpt_nwot",
+            "zcpt_zico",
+            "zcpt_grad_norm"
+          ],
+          "consensus_strength": 0.49713144470299614,
+          "rank_efficiency": 0.7458481296100169,
+          "backbone_score": 0.3707845582020552
+        },
+        {
+          "indices": [
+            0,
+            3,
+            5
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_near",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.49267240497754955,
+          "rank_efficiency": 0.7506704566974087,
+          "backbone_score": 0.36983461924670785
+        },
+        {
+          "indices": [
+            0,
+            1,
+            6
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_l2_norm",
+            "zcpt_grad_norm"
+          ],
+          "consensus_strength": 0.5016412770833458,
+          "rank_efficiency": 0.736090563369156,
+          "backbone_score": 0.3692534102575029
+        },
+        {
+          "indices": [
+            0,
+            3,
+            6
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_near",
+            "zcpt_grad_norm"
+          ],
+          "consensus_strength": 0.4857117989359789,
+          "rank_efficiency": 0.7516917588802182,
+          "backbone_score": 0.36510555645106085
+        }
+      ],
+      "candidate_scope": "consensus_core"
+    },
+    "budget_mode": "hard",
+    "configured_proxy_budget": 3
+  },
+  "factorization": {
+    "proxy_names": [
+      "zcpt_epe_nas",
+      "zcpt_epsinas",
+      "zcpt_eznas_darts",
+      "zcpt_fisher",
+      "zcpt_grad_norm",
+      "zcpt_jacob",
+      "zcpt_jacob_cov",
+      "zcpt_l2_norm",
+      "zcpt_near",
+      "zcpt_nwot",
+      "zcpt_plain",
+      "zcpt_snip",
+      "zcpt_synflow",
+      "zcpt_zico"
+    ],
+    "apply_gate": true,
+    "cache_layout": "readout_axes",
+    "factorization_device": "cpu",
+    "gate_utility_raw": [
+      0.03430855233683631,
+      0.08575934976017467,
+      0.0,
+      0.2630400123860922,
+      0.22268787654674344,
+      0.35177334460867254,
+      0.10190208217318196,
+      0.37830061016514127,
+      0.348831120040432,
+      0.3728336902836238,
+      0.13739421114493125,
+      0.2349877170156978,
+      0.18004673512494568,
+      0.3634763113520399
+    ],
+    "gate_utility_reweighted": [
+      0.201956436660604,
+      0.47315742291800644,
+      0.1514895169021765,
+      1.0807163903744652,
+      1.3593592763859845,
+      3.0553563717590366,
+      0.3586536515392719,
+      2.9748630340324347,
+      2.717737472783746,
+      2.920554127922744,
+      0.8476408457003687,
+      1.634533321432035,
+      0.5149762766576095,
+      2.547055007703717
+    ],
+    "gate_stage1_kept_names": [
+      "zcpt_jacob",
+      "zcpt_snip",
+      "zcpt_zico"
+    ],
+    "gate_stage1_dropped_names": [
+      "zcpt_epe_nas",
+      "zcpt_epsinas",
+      "zcpt_eznas_darts",
+      "zcpt_fisher",
+      "zcpt_grad_norm",
+      "zcpt_jacob_cov",
+      "zcpt_l2_norm",
+      "zcpt_near",
+      "zcpt_nwot",
+      "zcpt_plain",
+      "zcpt_synflow"
+    ],
+    "backbone_selection": {
+      "proxy_budget": 3,
+      "backbone_capacity": 3,
+      "consensus_core_names": [
+        "zcpt_jacob",
+        "zcpt_l2_norm",
+        "zcpt_nwot",
+        "zcpt_near",
+        "zcpt_zico",
+        "zcpt_snip",
+        "zcpt_grad_norm"
+      ],
+      "consensus_dropped_names": [
+        "zcpt_fisher",
+        "zcpt_plain",
+        "zcpt_synflow",
+        "zcpt_epsinas",
+        "zcpt_jacob_cov",
+        "zcpt_epe_nas",
+        "zcpt_eznas_darts"
+      ],
+      "backbone_names": [
+        "zcpt_jacob",
+        "zcpt_snip",
+        "zcpt_zico"
+      ],
+      "backbone_dropped_names": [
+        "zcpt_epe_nas",
+        "zcpt_epsinas",
+        "zcpt_eznas_darts",
+        "zcpt_fisher",
+        "zcpt_grad_norm",
+        "zcpt_jacob_cov",
+        "zcpt_l2_norm",
+        "zcpt_near",
+        "zcpt_nwot",
+        "zcpt_plain",
+        "zcpt_synflow"
+      ],
+      "intrinsic_effective_rank": 6.417023854040627,
+      "stage1_group_effective_ranks": [
+        5.755400953747958,
+        7.078646754333297
+      ],
+      "stage1_mean_effective_rank": 6.417023854040627,
+      "intrinsic_core_count": 7,
+      "selected_core_count": 3,
+      "stage1_utility_rule": "mean absolute rank correlation within each structural group, then equal mean across groups",
+      "cardinality_rule": "ceiling of mean group spectral effective rank, followed by budget-constrained consensus-rank coreset when required",
+      "compressed_to_budget": true,
+      "compression": {
+        "subset_size": 3,
+        "selection_rule": "maximize consensus strength times effective-rank efficiency",
+        "selected": {
+          "indices": [
+            0,
+            4,
+            5
+          ],
+          "names": [
+            "zcpt_jacob",
+            "zcpt_zico",
+            "zcpt_snip"
+          ],
+          "consensus_strength": 0.5043536126985143,
+          "rank_efficiency": 0.7554941631697533,
+          "backbone_score": 0.3810362105673059
+        },
+        "top_candidates": [
+          {
+            "indices": [
+              0,
+              4,
+              5
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_zico",
+              "zcpt_snip"
+            ],
+            "consensus_strength": 0.5043536126985143,
+            "rank_efficiency": 0.7554941631697533,
+            "backbone_score": 0.3810362105673059
+          },
+          {
+            "indices": [
+              0,
+              4,
+              6
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_zico",
+              "zcpt_grad_norm"
+            ],
+            "consensus_strength": 0.49739300665694364,
+            "rank_efficiency": 0.7580913621363186,
+            "backbone_score": 0.3770693419336414
+          },
+          {
+            "indices": [
+              3,
+              4,
+              5
+            ],
+            "names": [
+              "zcpt_near",
+              "zcpt_zico",
+              "zcpt_snip"
+            ],
+            "consensus_strength": 0.49057764754135436,
+            "rank_efficiency": 0.7685912875541745,
+            "backbone_score": 0.37705370576910757
+          },
+          {
+            "indices": [
+              2,
+              4,
+              5
+            ],
+            "names": [
+              "zcpt_nwot",
+              "zcpt_zico",
+              "zcpt_snip"
+            ],
+            "consensus_strength": 0.5040920507445669,
+            "rank_efficiency": 0.7435628151007915,
+            "backbone_score": 0.37482410432156116
+          },
+          {
+            "indices": [
+              0,
+              1,
+              5
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_l2_norm",
+              "zcpt_snip"
+            ],
+            "consensus_strength": 0.5086018831249165,
+            "rank_efficiency": 0.7340447845251362,
+            "backbone_score": 0.37333655970750784
+          },
+          {
+            "indices": [
+              3,
+              4,
+              6
+            ],
+            "names": [
+              "zcpt_near",
+              "zcpt_zico",
+              "zcpt_grad_norm"
+            ],
+            "consensus_strength": 0.48361704149978363,
+            "rank_efficiency": 0.7703747286772075,
+            "backbone_score": 0.3725663471290696
+          },
+          {
+            "indices": [
+              2,
+              4,
+              6
+            ],
+            "names": [
+              "zcpt_nwot",
+              "zcpt_zico",
+              "zcpt_grad_norm"
+            ],
+            "consensus_strength": 0.49713144470299614,
+            "rank_efficiency": 0.7458481296100169,
+            "backbone_score": 0.3707845582020552
+          },
+          {
+            "indices": [
+              0,
+              3,
+              5
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_near",
+              "zcpt_snip"
+            ],
+            "consensus_strength": 0.49267240497754955,
+            "rank_efficiency": 0.7506704566974087,
+            "backbone_score": 0.36983461924670785
+          },
+          {
+            "indices": [
+              0,
+              1,
+              6
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_l2_norm",
+              "zcpt_grad_norm"
+            ],
+            "consensus_strength": 0.5016412770833458,
+            "rank_efficiency": 0.736090563369156,
+            "backbone_score": 0.3692534102575029
+          },
+          {
+            "indices": [
+              0,
+              3,
+              6
+            ],
+            "names": [
+              "zcpt_jacob",
+              "zcpt_near",
+              "zcpt_grad_norm"
+            ],
+            "consensus_strength": 0.4857117989359789,
+            "rank_efficiency": 0.7516917588802182,
+            "backbone_score": 0.36510555645106085
+          }
+        ],
+        "candidate_scope": "consensus_core"
+      },
+      "budget_mode": "hard",
+      "configured_proxy_budget": 3
+    },
+    "complement_admission_rule": "repeated_structure_reliability",
+    "complement_admission": {
+      "selection_rule": "effective-rank gain x fixed-factorization operation Jaccard change x effective context support x paired-cell agreement; retain the positive-evidence group above its largest gap",
+      "cross_context_reliability": "selection-change effective support multiplied by optional paired-context agreement; NB301 supplies conservative normal/reduction residual agreement",
+      "admission_capacity": 0,
+      "operation_topk_count": 5,
+      "core_effective_rank": 2.2664824895092592,
+      "candidate_evidence": [
+        {
+          "index": 12,
+          "name": "zcpt_synflow",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 12.275290634081644,
+          "effective_rank_delta": 0.9145375614006461,
+          "fixed_view_operation_jaccard_drop": 0.08333333333333334,
+          "admission_operation_jaccard_drop": 0.08333333333333334,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 7.000000000000004,
+          "selection_change_support_reliability": 0.25000000000000017,
+          "paired_context_agreement": 0.3202368484303765,
+          "global_cross_cell_spearman": 0.6697205592640054,
+          "cross_cell_correlation_lower_bound": 0.5658947326406003,
+          "repeated_structure_reliability": 0.3202368484303765,
+          "cross_context_reliability": 0.08005921210759417,
+          "complement_score": 0.006101429717378022,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 7,
+          "name": "zcpt_l2_norm",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 5.189154553150286,
+          "effective_rank_delta": 0.3509788630182542,
+          "fixed_view_operation_jaccard_drop": 0.12755102040816327,
+          "admission_operation_jaccard_drop": 0.12755102040816327,
+          "fixed_context_operation_jaccard_drop": [
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.5714285714285714,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 9.829013021264116,
+          "selection_change_support_reliability": 0.3510361793308613,
+          "paired_context_agreement": 0.02768005597024973,
+          "global_cross_cell_spearman": 0.3245350623848415,
+          "cross_cell_correlation_lower_bound": 0.16637324295165293,
+          "repeated_structure_reliability": 0.02768005597024973,
+          "cross_context_reliability": 0.009716701091460861,
+          "complement_score": 0.00043499447721545445,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 9,
+          "name": "zcpt_nwot",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 5.206377452988489,
+          "effective_rank_delta": 0.3526273042989052,
+          "fixed_view_operation_jaccard_drop": 0.10714285714285714,
+          "admission_operation_jaccard_drop": 0.10714285714285714,
+          "fixed_context_operation_jaccard_drop": [
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 9.000000000000002,
+          "selection_change_support_reliability": 0.3214285714285715,
+          "paired_context_agreement": 0.00041666176357625553,
+          "global_cross_cell_spearman": 0.18696325765545202,
+          "cross_cell_correlation_lower_bound": 0.02041229442214313,
+          "repeated_structure_reliability": 0.00041666176357625553,
+          "cross_context_reliability": 0.00013392699543522503,
+          "complement_score": 5.059962361411627e-06,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 0,
+          "name": "zcpt_epe_nas",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 13.906801478461954,
+          "effective_rank_delta": 0.9726007879890415,
+          "fixed_view_operation_jaccard_drop": 0.15476190476190474,
+          "admission_operation_jaccard_drop": 0.15476190476190474,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 13.000000000000012,
+          "selection_change_support_reliability": 0.46428571428571475,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": -0.10882441073899098,
+          "cross_cell_correlation_lower_bound": -0.2710813056444447,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 1,
+          "name": "zcpt_epsinas",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 13.668982250393451,
+          "effective_rank_delta": 0.9661925997863312,
+          "fixed_view_operation_jaccard_drop": 0.1513605442176871,
+          "admission_operation_jaccard_drop": 0.1513605442176871,
+          "fixed_context_operation_jaccard_drop": [
+            0.0,
+            0.0,
+            0.5714285714285714,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337
+          ],
+          "effective_context_support": 11.823067962391189,
+          "selection_change_support_reliability": 0.42225242722825673,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": -0.29924959674591484,
+          "cross_cell_correlation_lower_bound": -0.4442140305018308,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 2,
+          "name": "zcpt_eznas_darts",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 0.0,
+          "effective_rank_delta": 0.0,
+          "fixed_view_operation_jaccard_drop": 0.0,
+          "admission_operation_jaccard_drop": 0.0,
+          "fixed_context_operation_jaccard_drop": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 0.0,
+          "selection_change_support_reliability": 0.0,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": 0.0,
+          "cross_cell_correlation_lower_bound": -0.16718901487329466,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 3,
+          "name": "zcpt_fisher",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 9.924540810323602,
+          "effective_rank_delta": 0.7741254372645687,
+          "fixed_view_operation_jaccard_drop": 0.1360544217687075,
+          "admission_operation_jaccard_drop": 0.1360544217687075,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.5714285714285714,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.5714285714285714
+          ],
+          "effective_context_support": 9.722254493942295,
+          "selection_change_support_reliability": 0.3472233747836534,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": 0.16189456101090854,
+          "cross_cell_correlation_lower_bound": -0.0054417455464769995,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 4,
+          "name": "zcpt_grad_norm",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 2.3729367444958793,
+          "effective_rank_delta": 0.10636601163007908,
+          "fixed_view_operation_jaccard_drop": 0.1717687074829932,
+          "admission_operation_jaccard_drop": 0.1717687074829932,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.5714285714285714,
+            0.5714285714285714
+          ],
+          "effective_context_support": 12.69403237596059,
+          "selection_change_support_reliability": 0.45335829914144965,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": -0.15818398587176197,
+          "cross_cell_correlation_lower_bound": -0.31698969327219734,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 6,
+          "name": "zcpt_jacob_cov",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 13.79408845734167,
+          "effective_rank_delta": 0.9696503931621598,
+          "fixed_view_operation_jaccard_drop": 0.2074829931972789,
+          "admission_operation_jaccard_drop": 0.2074829931972789,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.5714285714285714,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.5714285714285714,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337
+          ],
+          "effective_context_support": 15.675183565578918,
+          "selection_change_support_reliability": 0.5598279844849613,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": 0.031182857397879488,
+          "cross_cell_correlation_lower_bound": -0.13671893222356976,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 8,
+          "name": "zcpt_near",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 6.904099390680724,
+          "effective_rank_delta": 0.5156673323484968,
+          "fixed_view_operation_jaccard_drop": 0.1445578231292517,
+          "admission_operation_jaccard_drop": 0.1445578231292517,
+          "fixed_context_operation_jaccard_drop": [
+            0.0,
+            0.5714285714285714,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.5714285714285714,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.5714285714285714,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 9.664508294771212,
+          "selection_change_support_reliability": 0.3451610105275433,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": 0.14513959285682407,
+          "cross_cell_correlation_lower_bound": -0.022597773846602567,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        },
+        {
+          "index": 10,
+          "name": "zcpt_plain",
+          "residual_direction": 1.0,
+          "residual_norm_before_standardization": 12.8754300114705,
+          "effective_rank_delta": 0.9397432370337726,
+          "fixed_view_operation_jaccard_drop": 0.11904761904761907,
+          "admission_operation_jaccard_drop": 0.11904761904761907,
+          "fixed_context_operation_jaccard_drop": [
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.33333333333333337,
+            0.33333333333333337,
+            0.0,
+            0.0
+          ],
+          "effective_context_support": 10.000000000000002,
+          "selection_change_support_reliability": 0.3571428571428572,
+          "paired_context_agreement": 0.0,
+          "global_cross_cell_spearman": 0.05125311605429425,
+          "cross_cell_correlation_lower_bound": -0.1169379350711626,
+          "repeated_structure_reliability": 0.0,
+          "cross_context_reliability": 0.0,
+          "complement_score": 0.0,
+          "admitted_by_largest_gap": false,
+          "admitted_within_budget": false
+        }
+      ],
+      "added_names": [],
+      "abstained": true
+    },
+    "gate_kept_names": [
+      "zcpt_jacob",
+      "zcpt_snip",
+      "zcpt_zico"
+    ],
+    "gate_dropped_names": [
+      "zcpt_epe_nas",
+      "zcpt_epsinas",
+      "zcpt_eznas_darts",
+      "zcpt_fisher",
+      "zcpt_grad_norm",
+      "zcpt_jacob_cov",
+      "zcpt_l2_norm",
+      "zcpt_near",
+      "zcpt_nwot",
+      "zcpt_plain",
+      "zcpt_synflow"
+    ],
+    "align": "rank",
+    "transform": "rank_aligned_whitened_pc_axes",
+    "shared_basis": "projected_columns",
+    "axis_retention_rule": "retain_all_axes",
+    "eigvals_desc": [
+      1.9016108535349936,
+      0.9405837138422716,
+      0.1731900480073497
+    ],
+    "axis_rank_tolerance": 8.275951641608853e-14,
+    "n_axes": 3,
+    "n_cache_metrics": 4,
+    "orientation_proxy_order": [
+      "jacob",
+      "snip",
+      "zico"
+    ],
+    "oriented_axes": [
+      {
+        "axis": 1,
+        "direction": 1.0,
+        "strongest_proxy": "zico",
+        "strongest_abs_corr": 0.9385268828343523,
+        "corr": {
+          "jacob": 0.9384738656272871,
+          "snip": 0.33990708348938947,
+          "zico": 0.9385268828343523
+        },
+        "oriented_corr": {
+          "jacob": 0.9384738656272871,
+          "snip": 0.33990708348938947,
+          "zico": 0.9385268828343523
+        }
+      },
+      {
+        "axis": 2,
+        "direction": 1.0,
+        "strongest_proxy": "snip",
+        "strongest_abs_corr": 0.9492194534979163,
+        "corr": {
+          "jacob": -0.09736952934900618,
+          "snip": 0.9492194534979163,
+          "zico": -0.08501143526524238
+        },
+        "oriented_corr": {
+          "jacob": -0.09736952934900618,
+          "snip": 0.9492194534979163,
+          "zico": -0.08501143526524238
+        }
+      },
+      {
+        "axis": 3,
+        "direction": 1.0,
+        "strongest_proxy": "jacob",
+        "strongest_abs_corr": 0.3156118526770934,
+        "corr": {
+          "jacob": 0.3156118526770934,
+          "snip": -0.01405700898086685,
+          "zico": -0.2251910526022201
+        },
+        "oriented_corr": {
+          "jacob": 0.3156118526770934,
+          "snip": -0.01405700898086685,
+          "zico": -0.2251910526022201
+        }
+      }
+    ],
+    "refinement_axes": [
+      {
+        "axis": 1,
+        "direction": 1.0,
+        "strongest_proxy": "zico",
+        "strongest_abs_corr": 0.9385268828343523,
+        "corr": {
+          "jacob": 0.9384738656272871,
+          "snip": 0.33990708348938947,
+          "zico": 0.9385268828343523
+        },
+        "oriented_corr": {
+          "jacob": 0.9384738656272871,
+          "snip": 0.33990708348938947,
+          "zico": 0.9385268828343523
+        },
+        "axis_type": "principal_axis"
+      },
+      {
+        "axis": 2,
+        "direction": 1.0,
+        "strongest_proxy": "snip",
+        "strongest_abs_corr": 0.9492194534979163,
+        "corr": {
+          "jacob": -0.09736952934900618,
+          "snip": 0.9492194534979163,
+          "zico": -0.08501143526524238
+        },
+        "oriented_corr": {
+          "jacob": -0.09736952934900618,
+          "snip": 0.9492194534979163,
+          "zico": -0.08501143526524238
+        },
+        "axis_type": "principal_axis"
+      },
+      {
+        "axis": 3,
+        "direction": 1.0,
+        "strongest_proxy": "jacob",
+        "strongest_abs_corr": 0.3156118526770934,
+        "corr": {
+          "jacob": 0.3156118526770934,
+          "snip": -0.01405700898086685,
+          "zico": -0.2251910526022201
+        },
+        "oriented_corr": {
+          "jacob": 0.3156118526770934,
+          "snip": -0.01405700898086685,
+          "zico": -0.2251910526022201
+        },
+        "axis_type": "principal_axis"
+      }
+    ],
+    "residual_complement_axes": [],
+    "readout": "mean of consensus-oriented whitened principal axes"
+  }
+}

@@ -17,6 +17,9 @@ REFINEMENT_EVENT = re.compile(r"refine (full_proxy_pool|budgeted_proxy_subset) (
 REFINE_FROM_CACHE_EVENT = re.compile(
     r"refine-from-cache (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)"
 )
+CLEAN_REFINEMENT_EVENT = re.compile(
+    r"ProxyDiff NB301 refinement (START|DONE) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)"
+)
 
 
 def parse_args():
@@ -58,6 +61,10 @@ def stage_duration(path: Path, proxy_set: str):
         generic_match = REFINE_FROM_CACHE_EVENT.search(line)
         if generic_match:
             event, timestamp = generic_match.groups()
+            events[event.lower()] = parse_time(timestamp)
+        clean_match = CLEAN_REFINEMENT_EVENT.search(line)
+        if clean_match:
+            event, timestamp = clean_match.groups()
             events[event.lower()] = parse_time(timestamp)
     if set(events) != {"start", "done"}:
         raise ValueError(f"incomplete refinement timing in {path}: {events}")

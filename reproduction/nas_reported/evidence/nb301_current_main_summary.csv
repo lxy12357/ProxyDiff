@@ -1,0 +1,3 @@
+row,prior_acc,axis_acc,refinement_acc,prior_rank,axis_rank,refinement_rank,stagewise_non_decreasing,stagewise_rule_met,full_final_acc_gt_budget,finite_metrics,valid_ranks,all_checks_passed
+full_proxy_pool,94.19630432128906,94.62142181396484,94.75977325439453,16,1,1,True,True,True,True,True,True
+budgeted_proxy_subset,94.07917785644531,94.55513763427734,94.63880920410156,35,1,1,True,True,True,True,True,True

@@ -1,5 +1,5 @@
-method,proxy_set,selected_accuracy,balanced1000_a_rank,balanced1000_b_rank,balanced1000_c_rank,average_rank,score_gpu_hours,search_gpu_hours
-log_rank,budgeted_proxy_subset,93.93744659423828,50,48,48,48.666666666666664,1.3866666666666667,0.006260233
-log_rank,full_proxy_pool,93.90751647949219,54,54,54,54.0,6.538055555555555,0.006361111111111111
-proxydiff,budgeted_proxy_subset,94.54096984863281,2,1,1,1.3333333333333333,1.3866666666666667,0.04555555555555556
-proxydiff,full_proxy_pool,94.64030456542969,2,1,1,1.3333333333333333,6.538055555555555,0.0475
+"method","proxy_set","selected_accuracy","balanced1000_a_rank","balanced1000_b_rank","balanced1000_c_rank","average_rank","score_gpu_hours","search_gpu_hours","search_cpu_hours"
+"log_rank","budgeted_proxy_subset","93.7716827392578","105","106","106","105.666666666667","1.38666666666667","0","0.00826992611090342"
+"log_rank","full_proxy_pool","93.9075164794922","54","54","54","54","6.53805555555556","0","0.00692001594437493"
+"proxydiff","budgeted_proxy_subset","94.6388092041016","2","1","1","1.33333333333333","1.38666666666667","0.0530555555555556","0"
+"proxydiff","full_proxy_pool","94.7597732543945","1","1","1","1","6.53805555555556","0.0622222222222222","0"

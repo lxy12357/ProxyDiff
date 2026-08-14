@@ -1,0 +1,490 @@
+{
+  "aggregation": "log_rank",
+  "crossover_count": 25,
+  "definition": "NB301 evolution with population-relative operation-proxy rank aggregation",
+  "evaluated_unique": 203,
+  "generation_count": 5,
+  "history": [
+    {
+      "best_architecture": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ]
+      ],
+      "best_score": -1.028071815334904,
+      "evaluated_unique": 50,
+      "generation": 0
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            4
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ]
+      ],
+      "best_score": -0.9712198280546889,
+      "evaluated_unique": 89,
+      "generation": 1
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        [
+          [
+            1,
+            6
+          ],
+          [
+            0,
+            5
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            4
+          ]
+        ]
+      ],
+      "best_score": -0.9352962674635176,
+      "evaluated_unique": 127,
+      "generation": 2
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            1,
+            5
+          ]
+        ],
+        [
+          [
+            0,
+            6
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            4
+          ]
+        ]
+      ],
+      "best_score": -0.9602429099734711,
+      "evaluated_unique": 166,
+      "generation": 3
+    },
+    {
+      "best_architecture": [
+        [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            3,
+            0
+          ]
+        ],
+        [
+          [
+            1,
+            6
+          ],
+          [
+            0,
+            5
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            4,
+            4
+          ]
+        ]
+      ],
+      "best_score": -0.8484328954831792,
+      "evaluated_unique": 203,
+      "generation": 4
+    }
+  ],
+  "input_metadata": {
+    "synflow": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_synflow/operation_scores.json",
+      "predictor": "official_zcpt_synflow",
+      "protocol_revision": "cell_local_operation_ablation_20260605"
+    },
+    "zen": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zen/operation_scores.json",
+      "predictor": "official_zcpt_zen",
+      "protocol_revision": "cell_local_operation_ablation_20260605"
+    },
+    "zico": {
+      "batch_size": 64,
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zico/operation_scores.json",
+      "predictor": "official_zcpt_zico",
+      "protocol_revision": "cell_local_operation_ablation_20260605"
+    }
+  },
+  "mutation_count": 25,
+  "mutation_rate": 0.1,
+  "operation_score_root": "formal_inputs/operation_scores",
+  "parent_count": 10,
+  "population_size": 50,
+  "proxy_names": [
+    "synflow",
+    "zen",
+    "zico"
+  ],
+  "seed": 9000,
+  "selected_accuracy": 92.61683654785156,
+  "selected_architecture": [
+    [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        3,
+        0
+      ]
+    ],
+    [
+      [
+        1,
+        6
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        4,
+        4
+      ]
+    ]
+  ],
+  "selected_fixed_pool_rank": 811,
+  "selected_genotype": "Genotype(normal=[('skip_connect', 0), ('sep_conv_5x5', 1), ('max_pool_3x3', 2), ('skip_connect', 0), ('sep_conv_5x5', 3), ('max_pool_3x3', 2), ('dil_conv_5x5', 4), ('max_pool_3x3', 3)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 1), ('dil_conv_3x3', 0), ('sep_conv_5x5', 2), ('skip_connect', 1), ('dil_conv_3x3', 3), ('dil_conv_3x3', 1), ('max_pool_3x3', 2), ('sep_conv_5x5', 4)], reduce_concat=[2, 3, 4, 5])",
+  "selected_score": -0.8484328954831792,
+  "wall_time_seconds": 22.76822566986084
+}

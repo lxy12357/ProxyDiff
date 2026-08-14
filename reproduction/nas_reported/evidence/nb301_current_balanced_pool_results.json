@@ -1,47 +1,47 @@
 {
-  "balanced_splits": "reproduction\\nas_reported\\evidence\\balanced_pools\\balanced3x1000_splits.json",
-  "balanced_splits_sha256": "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624",
-  "definition": "rank each searched architecture accuracy against the three fixed balanced1000 pools",
-  "reference_pool": "reproduction\\nas_reported\\evidence\\balanced_pools\\nb301_stratified3000_pool.json",
-  "reference_pool_sha256": "7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358",
-  "rows": [
-    {
-      "average_rank": 1.3333333333333333,
-      "balanced1000_a_rank": 2,
-      "balanced1000_b_rank": 1,
-      "balanced1000_c_rank": 1,
-      "label": "full_proxy_pool",
-      "selected_accuracy": 94.64030456542969,
-      "source_result": "run_output/full_proxy_pool_free_decode.json"
-    },
-    {
-      "average_rank": 1.3333333333333333,
-      "balanced1000_a_rank": 2,
-      "balanced1000_b_rank": 1,
-      "balanced1000_c_rank": 1,
-      "label": "budgeted_proxy_subset",
-      "selected_accuracy": 94.54096984863281,
-      "source_result": "run_output/budgeted_proxy_subset_free_decode.json"
-    },
-    {
-      "average_rank": 48.666666666666664,
-      "balanced1000_a_rank": 50,
-      "balanced1000_b_rank": 48,
-      "balanced1000_c_rank": 48,
-      "label": "az_budgeted",
-      "selected_accuracy": 93.93744659423828,
-      "source_result": "run_output/budgeted_proxy_subset_log_rank.json"
-    },
-    {
-      "average_rank": 54.0,
-      "balanced1000_a_rank": 54,
-      "balanced1000_b_rank": 54,
-      "balanced1000_c_rank": 54,
-      "label": "az_full",
-      "selected_accuracy": 93.90751647949219,
-      "source_result": "run_output/full_proxy_pool_log_rank.json"
-    }
-  ],
-  "split_protocol_revision": "stratified3000_nb301_internalrank_balanced3x1000_readout_v1_20260615",
-  "split_seed": 20260614
+    "definition":  "rank each searched architecture accuracy against the three fixed balanced1000 pools",
+    "reference_pool":  "reproduction/nas_reported/evidence/balanced_pools/nb301_stratified3000_pool.json",
+    "reference_pool_sha256":  "bde818818622d1d48719ff94c300553dd7e44d2bf8e29e43064bf5ba85e56a3f",
+    "balanced_splits":  "reproduction/nas_reported/evidence/balanced_pools/balanced3x1000_splits.json",
+    "balanced_splits_sha256":  "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624",
+    "split_seed":  20260614,
+    "split_protocol_revision":  "stratified3000_nb301_internalrank_balanced3x1000_readout_v1_20260615",
+    "rows":  [
+                 {
+                     "label":  "full_proxy_pool",
+                     "selected_accuracy":  94.759773254394531,
+                     "balanced1000_a_rank":  1,
+                     "balanced1000_b_rank":  1,
+                     "balanced1000_c_rank":  1,
+                     "average_rank":  1,
+                     "source_result":  "evidence/artifacts/main/full_proxy_pool_free_decode.json"
+                 },
+                 {
+                     "label":  "budgeted_proxy_subset",
+                     "selected_accuracy":  94.638809204101563,
+                     "balanced1000_a_rank":  2,
+                     "balanced1000_b_rank":  1,
+                     "balanced1000_c_rank":  1,
+                     "average_rank":  1.3333333333333333,
+                     "source_result":  "evidence/artifacts/main/budgeted_proxy_subset_free_decode.json"
+                 },
+                 {
+                     "label":  "az_budgeted",
+                     "selected_accuracy":  93.771682739257813,
+                     "balanced1000_a_rank":  105,
+                     "balanced1000_b_rank":  106,
+                     "balanced1000_c_rank":  106,
+                     "average_rank":  105.66666666666667,
+                     "source_result":  "evidence/artifacts/controls/budgeted_log_rank.json"
+                 },
+                 {
+                     "label":  "az_full",
+                     "selected_accuracy":  93.907516479492188,
+                     "balanced1000_a_rank":  54,
+                     "balanced1000_b_rank":  54,
+                     "balanced1000_c_rank":  54,
+                     "average_rank":  54,
+                     "source_result":  "evidence/artifacts/controls/full_log_rank.json"
+                 }
+             ]
 }

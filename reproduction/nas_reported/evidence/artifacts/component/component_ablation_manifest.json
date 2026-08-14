@@ -1,0 +1,305 @@
+{
+  "operation_score_root": "formal_inputs/operation_scores",
+  "single_proxy_candidate_names": [
+    "zcpt_epe_nas",
+    "zcpt_epsinas",
+    "zcpt_eznas_darts",
+    "zcpt_fisher",
+    "zcpt_grad_norm",
+    "zcpt_grasp",
+    "zcpt_jacob",
+    "zcpt_jacob_cov",
+    "zcpt_l2_norm",
+    "zcpt_meco",
+    "zcpt_near",
+    "zcpt_nwot",
+    "zcpt_plain",
+    "zcpt_snip",
+    "zcpt_swap",
+    "zcpt_synflow",
+    "zcpt_te_nas",
+    "zcpt_zen",
+    "zcpt_zico"
+  ],
+  "retained_multi_proxy_names": [
+    "zcpt_jacob",
+    "zcpt_l2_norm",
+    "zcpt_meco",
+    "zcpt_near",
+    "zcpt_nwot",
+    "zcpt_swap",
+    "zcpt_synflow",
+    "zcpt_zen",
+    "zcpt_zico"
+  ],
+  "selection_details": "formal_inputs/caches/full_proxy_pool_details.json",
+  "direct_score_artifacts": [
+    {
+      "name": "single_zcpt_epe_nas",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_epe_nas.pt"
+    },
+    {
+      "name": "single_zcpt_epsinas",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_epsinas.pt"
+    },
+    {
+      "name": "single_zcpt_eznas_darts",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_eznas_darts.pt"
+    },
+    {
+      "name": "single_zcpt_fisher",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_fisher.pt"
+    },
+    {
+      "name": "single_zcpt_grad_norm",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_grad_norm.pt"
+    },
+    {
+      "name": "single_zcpt_grasp",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_grasp.pt"
+    },
+    {
+      "name": "single_zcpt_jacob",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_jacob.pt"
+    },
+    {
+      "name": "single_zcpt_jacob_cov",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_jacob_cov.pt"
+    },
+    {
+      "name": "single_zcpt_l2_norm",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_l2_norm.pt"
+    },
+    {
+      "name": "single_zcpt_meco",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_meco.pt"
+    },
+    {
+      "name": "single_zcpt_near",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_near.pt"
+    },
+    {
+      "name": "single_zcpt_nwot",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_nwot.pt"
+    },
+    {
+      "name": "single_zcpt_plain",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_plain.pt"
+    },
+    {
+      "name": "single_zcpt_snip",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_snip.pt"
+    },
+    {
+      "name": "single_zcpt_swap",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_swap.pt"
+    },
+    {
+      "name": "single_zcpt_synflow",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_synflow.pt"
+    },
+    {
+      "name": "single_zcpt_te_nas",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_te_nas.pt"
+    },
+    {
+      "name": "single_zcpt_zen",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_zen.pt"
+    },
+    {
+      "name": "single_zcpt_zico",
+      "artifact": "generated/component_ablation/direct_scores/single_zcpt_zico.pt"
+    },
+    {
+      "name": "raw_multi_proxy_mean",
+      "artifact": "generated/component_ablation/direct_scores/raw_multi_proxy_mean.pt"
+    }
+  ],
+  "raw_refinement_cache": "generated/component_ablation/raw_multi_proxy_refinement_cache.pt",
+  "cache_layout": {
+    "metric_0": "uniform raw-proxy rank mean",
+    "correction_metrics": [
+      "zcpt_jacob",
+      "zcpt_l2_norm",
+      "zcpt_meco",
+      "zcpt_near",
+      "zcpt_nwot",
+      "zcpt_swap",
+      "zcpt_synflow",
+      "zcpt_zen",
+      "zcpt_zico"
+    ]
+  },
+  "input_metadata": {
+    "zcpt_epe_nas": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_epe_nas/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_epsinas": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_epsinas/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_eznas_darts": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_eznas_darts/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_fisher": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_fisher/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_grad_norm": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_grad_norm/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_grasp": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_grasp/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_jacob": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_jacob/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Jacob component score: ablate one candidate op in the projected DARTS supernet, compute the official Zero-Cost-PT Jocab_Score summed over normal and reduce cells, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op, matching the other scalar ZCPT proxies; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_jacob_cov": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_jacob_cov/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_l2_norm": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_l2_norm/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "L2 component score: official parameter L2 norm of the candidate op module, summed across all projected DARTS cells of the requested cell_type. This is the parameter-space equivalent of neutral_supernet_score - score_after_removing_one_candidate_op; runtime forward masks are not used because they do not delete parameters."
+    },
+    "zcpt_meco": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_meco/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_near": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_near/operation_scores.json",
+      "batch_size": 8,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_nwot": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_nwot/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "NWOT component score: ablate one candidate op in the projected DARTS supernet, compute the standalone NASWOT/NWOT ReLU activation-kernel logdet on the whole model, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op; architecture score = sum selected edge-op operation scores. This row is a projected ZCPT-supernet NWOT proxy and is separate from official Zero-Cost-PT's Jocab_Score row named zcpt_jacob."
+    },
+    "zcpt_plain": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_plain/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_v2_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_snip": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_snip/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_swap": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_swap/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_synflow": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_synflow/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_te_nas": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_te_nas/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_tenas_delta_v1_20260612",
+      "score_definition": "TE-NAS component score follows official prune semantics: for each cell_type independently, compute origin and masked NTK/RN scores under the same projected supernet state, form relative deltas (origin - masked) / origin, rank higher NTK delta and lower RN delta, then use operation_score = -mean(ntk_prune_rank, rn_prune_rank); architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_zen": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zen/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_zico": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zico/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    }
+  },
+  "retained_input_metadata": {
+    "zcpt_jacob": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_jacob/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Jacob component score: ablate one candidate op in the projected DARTS supernet, compute the official Zero-Cost-PT Jocab_Score summed over normal and reduce cells, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op, matching the other scalar ZCPT proxies; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_l2_norm": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_l2_norm/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "L2 component score: official parameter L2 norm of the candidate op module, summed across all projected DARTS cells of the requested cell_type. This is the parameter-space equivalent of neutral_supernet_score - score_after_removing_one_candidate_op; runtime forward masks are not used because they do not delete parameters."
+    },
+    "zcpt_meco": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_meco/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_near": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_near/operation_scores.json",
+      "batch_size": 8,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_nwot": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_nwot/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "NWOT component score: ablate one candidate op in the projected DARTS supernet, compute the standalone NASWOT/NWOT ReLU activation-kernel logdet on the whole model, and use operation_score = neutral_supernet_score - score_after_masking_one_candidate_op; architecture score = sum selected edge-op operation scores. This row is a projected ZCPT-supernet NWOT proxy and is separate from official Zero-Cost-PT's Jocab_Score row named zcpt_jacob."
+    },
+    "zcpt_swap": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_swap/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_synflow": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_synflow/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_zen": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zen/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    },
+    "zcpt_zico": {
+      "path": "formal_inputs/operation_scores/nb301_zcpt_zico/operation_scores.json",
+      "batch_size": 64,
+      "protocol_revision": "cell_local_operation_ablation_20260605",
+      "score_definition": "Component score is stored per cell_type/candidate-op. For scalar proxies, operation_score = baseline_score - masked_score on the projected DARTS supernet; architecture score = sum selected edge-op operation scores"
+    }
+  }
+}

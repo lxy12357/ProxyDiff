@@ -12,6 +12,11 @@ from pathlib import Path
 import torch
 
 
+def display_proxy_name(name: object) -> str:
+    value = str(name)
+    return value[5:] if value.startswith("zcpt_") else value
+
+
 def flatten_axis_parameters(value: object) -> list[float]:
     if value is None:
         return []
@@ -75,7 +80,7 @@ def main() -> None:
                 "coordinate": f"axis_{index}",
                 "raw_parameter": raw_parameter,
                 "effective_coefficient": args.residual_axis_scale * math.tanh(raw_parameter),
-                "strongest_proxy": axis["strongest_proxy"],
+                "strongest_proxy": display_proxy_name(axis["strongest_proxy"]),
                 "strongest_abs_corr": axis["strongest_abs_corr"],
                 "axis_type": axis.get("axis_type", "principal_axis"),
             }
@@ -84,7 +89,7 @@ def main() -> None:
             profile_rows.append(
                 {
                     "coordinate": f"axis_{index}",
-                    "proxy": proxy_name,
+                    "proxy": display_proxy_name(proxy_name),
                     "oriented_spearman": correlation,
                     "abs_spearman": abs(float(correlation)),
                 }

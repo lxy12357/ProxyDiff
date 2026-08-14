@@ -1,0 +1,305 @@
+{
+  "definition": "free selected arch from saved cell-edge-op scores; equivalent rank = 1 + count(fixed1000_acc > selected_arch_acc)",
+  "fixed1000_best_acc": 94.48287963867188,
+  "fixed1000_best_index": 418,
+  "fixed1000_best_live_abs_diff": 0.0,
+  "fixed1000_best_live_surrogate_acc_sanity": 94.48287963867188,
+  "fixed1000_num": 1000,
+  "fixed_arch": "reproduction/nas/assets/arch_dataset_20cell_c36.pt",
+  "rows": [
+    {
+      "artifact": "checkpoint:proxydiff_epoch_-01_score_params",
+      "decode": "exact additive optimum within the saved progressive mask, with legal distinct-source pairs per NB301 node",
+      "free_top_score_arch": {
+        "acc": 93.82170104980469,
+        "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+        "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 3), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+        "equiv_fixed1000_rank": 135,
+        "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+        "score": 13.542568661272526
+      },
+      "method": "proxydiff_epoch_-01_score_params",
+      "metric_epoch": -1,
+      "n_reported_candidates": 10,
+      "progressive_mask_applied": true,
+      "top10_by_method_score": [
+        {
+          "acc": 93.82170104980469,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 3), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 135,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.542568661272526
+        },
+        {
+          "acc": 93.30107116699219,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 3), (2, 3, 4), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 3), (2, 4), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 466,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 1), ('sep_conv_5x5', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.530142165720463
+        },
+        {
+          "acc": 93.70780181884766,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 5), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 190,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.52291003614664
+        },
+        {
+          "acc": 93.80438995361328,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 4), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 4), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 140,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.518242754042149
+        },
+        {
+          "acc": 93.14991760253906,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 5), (2, 3, 4), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 5), (2, 4), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 555,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('dil_conv_3x3', 1), ('sep_conv_5x5', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.510483540594578
+        },
+        {
+          "acc": 93.24735260009766,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 4), (2, 4), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 490,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.505816258490086
+        },
+        {
+          "acc": 93.85604858398438,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (2, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 3), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (2, 3)))",
+          "equiv_fixed1000_rank": 120,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 2)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.503845371305943
+        },
+        {
+          "acc": 94.00694274902344,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 3), (1, 3, 3), (0, 4, 5), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 3), (1, 3), (0, 5), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 63,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1), ('dil_conv_3x3', 0), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.503306902945042
+        },
+        {
+          "acc": 93.33971405029297,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 3), (2, 3, 4), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (2, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 3), (2, 4), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (2, 3)))",
+          "equiv_fixed1000_rank": 437,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 1), ('sep_conv_5x5', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 2)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.49141887575388
+        },
+        {
+          "acc": 93.7037582397461,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 3), (2, 3, 4), (0, 4, 5), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 6), (1, 2, 3), (1, 3, 4), (2, 3, 4), (1, 4, 4), (3, 4, 3), (0, 5, 4), (3, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 3), (2, 4), (0, 5), (3, 3), (2, 5), (4, 3)), ((0, 6), (1, 3), (1, 4), (2, 4), (1, 4), (3, 3), (0, 4), (3, 3)))",
+          "equiv_fixed1000_rank": 192,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 1), ('sep_conv_5x5', 2), ('dil_conv_3x3', 0), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('dil_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_5x5', 1), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('sep_conv_3x3', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 3)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.490880407392979
+        }
+      ]
+    },
+    {
+      "artifact": "checkpoint:proxydiff_epoch_000_score_params",
+      "decode": "exact additive optimum within the saved progressive mask, with legal distinct-source pairs per NB301 node",
+      "free_top_score_arch": {
+        "acc": 93.85543823242188,
+        "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+        "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+        "equiv_fixed1000_rank": 121,
+        "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+        "score": 13.563752830028534
+      },
+      "method": "proxydiff_epoch_000_score_params",
+      "metric_epoch": 0,
+      "n_reported_candidates": 10,
+      "progressive_mask_applied": true,
+      "top10_by_method_score": [
+        {
+          "acc": 93.85543823242188,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 121,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.563752830028534
+        },
+        {
+          "acc": 93.91752624511719,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 93,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.545040130615234
+        },
+        {
+          "acc": 94.04096984863281,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 3), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 52,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.533664047718048
+        },
+        {
+          "acc": 93.86293029785156,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 4), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 4), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 117,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_5x5', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.533165752887726
+        },
+        {
+          "acc": 93.85343933105469,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 123,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.532744586467743
+        },
+        {
+          "acc": 93.81770324707031,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 3), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 3), (1, 3)))",
+          "equiv_fixed1000_rank": 137,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.517653107643127
+        },
+        {
+          "acc": 94.1030502319336,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 3), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 32,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.514951348304749
+        },
+        {
+          "acc": 93.92716979980469,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 4), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 4), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 88,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_5x5', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.514453053474426
+        },
+        {
+          "acc": 93.90897369384766,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 5), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 5), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 99,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('dil_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.514031887054443
+        },
+        {
+          "acc": 93.69126892089844,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 202,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.510890781879425
+        }
+      ]
+    },
+    {
+      "artifact": "checkpoint:proxydiff_step_030_mask_score_params",
+      "decode": "exact additive optimum within the saved progressive mask, with legal distinct-source pairs per NB301 node",
+      "free_top_score_arch": {
+        "acc": 93.85543823242188,
+        "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+        "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+        "equiv_fixed1000_rank": 121,
+        "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+        "score": 13.58447951078415
+      },
+      "method": "proxydiff_step_030_mask_score_params",
+      "metric_epoch": 0,
+      "n_reported_candidates": 10,
+      "progressive_mask_applied": true,
+      "top10_by_method_score": [
+        {
+          "acc": 93.85543823242188,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 121,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.58447951078415
+        },
+        {
+          "acc": 93.38594818115234,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 6), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 6), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 409,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('dil_conv_5x5', 1), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.568781077861786
+        },
+        {
+          "acc": 93.69126892089844,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 202,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.567878186702728
+        },
+        {
+          "acc": 93.91752624511719,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 93,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.562136977910995
+        },
+        {
+          "acc": 93.44282531738281,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 6), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 6), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 360,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('dil_conv_5x5', 1), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.546438544988632
+        },
+        {
+          "acc": 93.75670623779297,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (1, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (1, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 166,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.545535653829575
+        },
+        {
+          "acc": 93.81770324707031,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 6), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 3), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 6), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 3), (1, 3)))",
+          "equiv_fixed1000_rank": 137,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('dil_conv_5x5', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.545388042926788
+        },
+        {
+          "acc": 94.04096984863281,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (0, 3, 4), (1, 3, 3), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (0, 4), (1, 3), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 52,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.545039355754852
+        },
+        {
+          "acc": 93.37043762207031,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 6), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 3), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 6), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 3), (1, 3)))",
+          "equiv_fixed1000_rank": 417,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('dil_conv_5x5', 1), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.529689610004425
+        },
+        {
+          "acc": 93.5997314453125,
+          "arch3": "(((0, 2, 3), (1, 2, 4), (1, 3, 3), (2, 3, 5), (2, 4, 3), (3, 4, 3), (2, 5, 3), (4, 5, 3)), ((0, 2, 4), (1, 2, 5), (0, 3, 3), (2, 3, 4), (1, 4, 4), (3, 4, 6), (0, 5, 4), (1, 5, 3)))",
+          "arch_key": "(((0, 3), (1, 4), (1, 3), (2, 5), (2, 3), (3, 3), (2, 3), (4, 3)), ((0, 4), (1, 5), (0, 3), (2, 4), (1, 4), (3, 6), (0, 4), (1, 3)))",
+          "equiv_fixed1000_rank": 256,
+          "genotype": "Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('sep_conv_3x3', 1), ('dil_conv_3x3', 2), ('sep_conv_3x3', 2), ('sep_conv_3x3', 3), ('sep_conv_3x3', 2), ('sep_conv_3x3', 4)], normal_concat=[2, 3, 4, 5], reduce=[('sep_conv_5x5', 0), ('dil_conv_3x3', 1), ('sep_conv_3x3', 0), ('sep_conv_5x5', 2), ('sep_conv_5x5', 1), ('dil_conv_5x5', 3), ('sep_conv_5x5', 0), ('sep_conv_3x3', 1)], reduce_concat=[2, 3, 4, 5])",
+          "score": 13.529340922832489
+        }
+      ]
+    }
+  ]
+}

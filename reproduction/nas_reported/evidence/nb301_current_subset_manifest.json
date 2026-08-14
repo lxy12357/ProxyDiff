@@ -1,0 +1,191 @@
+{
+  "definition": "predeclared random proxy subsets for NB301 stability comparisons",
+  "selection_rule": "Python random.sample without replacement; independent seed-reset stream per source pool",
+  "seed": 20260615,
+  "sizes": [
+    3,
+    5
+  ],
+  "repeats_per_size": 3,
+  "source_pools": {
+    "retained_pool": [
+      "jacob",
+      "l2_norm",
+      "meco",
+      "near",
+      "nwot",
+      "swap",
+      "synflow",
+      "zen",
+      "zico"
+    ],
+    "full_proxy_pool": [
+      "epe_nas",
+      "epsinas",
+      "eznas_darts",
+      "fisher",
+      "grad_norm",
+      "grasp",
+      "jacob",
+      "jacob_cov",
+      "l2_norm",
+      "meco",
+      "near",
+      "nwot",
+      "plain",
+      "snip",
+      "swap",
+      "synflow",
+      "te_nas",
+      "zen",
+      "zico"
+    ]
+  },
+  "full_selection_details": "reproduction/nas_reported/evidence/artifacts/main/full_proxy_pool_details.json",
+  "subsets": [
+    {
+      "subset_id": "retained_k3_rep01",
+      "pool": "retained_pool",
+      "subset_size": 3,
+      "repeat": 1,
+      "proxy_names": [
+        "synflow",
+        "zen",
+        "zico"
+      ]
+    },
+    {
+      "subset_id": "retained_k3_rep02",
+      "pool": "retained_pool",
+      "subset_size": 3,
+      "repeat": 2,
+      "proxy_names": [
+        "l2_norm",
+        "nwot",
+        "synflow"
+      ]
+    },
+    {
+      "subset_id": "retained_k3_rep03",
+      "pool": "retained_pool",
+      "subset_size": 3,
+      "repeat": 3,
+      "proxy_names": [
+        "meco",
+        "nwot",
+        "zico"
+      ]
+    },
+    {
+      "subset_id": "retained_k5_rep01",
+      "pool": "retained_pool",
+      "subset_size": 5,
+      "repeat": 1,
+      "proxy_names": [
+        "jacob",
+        "meco",
+        "near",
+        "nwot",
+        "zico"
+      ]
+    },
+    {
+      "subset_id": "retained_k5_rep02",
+      "pool": "retained_pool",
+      "subset_size": 5,
+      "repeat": 2,
+      "proxy_names": [
+        "nwot",
+        "swap",
+        "synflow",
+        "zen",
+        "zico"
+      ]
+    },
+    {
+      "subset_id": "retained_k5_rep03",
+      "pool": "retained_pool",
+      "subset_size": 5,
+      "repeat": 3,
+      "proxy_names": [
+        "jacob",
+        "l2_norm",
+        "meco",
+        "zen",
+        "zico"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k3_rep01",
+      "pool": "full_proxy_pool",
+      "subset_size": 3,
+      "repeat": 1,
+      "proxy_names": [
+        "meco",
+        "snip",
+        "swap"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k3_rep02",
+      "pool": "full_proxy_pool",
+      "subset_size": 3,
+      "repeat": 2,
+      "proxy_names": [
+        "jacob",
+        "meco",
+        "plain"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k3_rep03",
+      "pool": "full_proxy_pool",
+      "subset_size": 3,
+      "repeat": 3,
+      "proxy_names": [
+        "grad_norm",
+        "jacob",
+        "zen"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k5_rep01",
+      "pool": "full_proxy_pool",
+      "subset_size": 5,
+      "repeat": 1,
+      "proxy_names": [
+        "eznas_darts",
+        "grad_norm",
+        "meco",
+        "near",
+        "plain"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k5_rep02",
+      "pool": "full_proxy_pool",
+      "subset_size": 5,
+      "repeat": 2,
+      "proxy_names": [
+        "epsinas",
+        "eznas_darts",
+        "grasp",
+        "jacob",
+        "meco"
+      ]
+    },
+    {
+      "subset_id": "all_proxy_k5_rep03",
+      "pool": "full_proxy_pool",
+      "subset_size": 5,
+      "repeat": 3,
+      "proxy_names": [
+        "eznas_darts",
+        "fisher",
+        "meco",
+        "nwot",
+        "zen"
+      ]
+    }
+  ]
+}

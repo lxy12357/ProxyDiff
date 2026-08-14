@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 
-EXPECTED_POOL_SHA256 = "7818b72ffbbc50a53a9ad9b34bed7007649a438fab1205a45003238208750358"
+EXPECTED_POOL_SHA256 = "f0c08e774e1c714da6b222ce203c7eff2f8ded8e77ff92bd982f015ce3b81763"
 EXPECTED_SPLITS_SHA256 = "2af3b354dd9ae481d7f6703a82a3062a9c6ba95b59eaa8911ed328fe18dd0624"
 
 
@@ -31,11 +31,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sha256(path: Path) -> str:
+def sha256(path: Path, *, normalize_newlines: bool = False) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
+    content = path.read_bytes()
+    if normalize_newlines:
+        content = content.replace(b"\r\n", b"\n")
+    digest.update(content)
     return digest.hexdigest()
 
 
@@ -66,7 +67,7 @@ def selected_accuracy(payload) -> float:
 
 def main() -> None:
     args = parse_args()
-    pool_hash = sha256(args.reference_pool)
+    pool_hash = sha256(args.reference_pool, normalize_newlines=True)
     splits_hash = sha256(args.balanced_splits)
     if not args.allow_unverified_reference:
         if pool_hash != EXPECTED_POOL_SHA256:
@@ -93,7 +94,7 @@ def main() -> None:
     for spec in args.result:
         label, result_path = parse_result_spec(spec)
         accuracy = selected_accuracy(json.loads(result_path.read_text(encoding="utf-8")))
-        row = {"label": label, "selected_accuracy": accuracy, "source_result": str(result_path)}
+        row = {"label": label, "selected_accuracy": accuracy, "source_result": result_path.as_posix()}
         ranks = []
         for name in expected_names:
             rank = 1 + sum(float(records[index]["acc"]) > accuracy for index in split_indices[name])

@@ -1,0 +1,11 @@
+===== ProxyDiff NB301 refinement START 2026-08-14 00:30:55 =====
+proxy_set=budgeted_proxy_subset
+cache=evidence/artifacts/cache/budgeted_proxy_subset_proxydiff_cache.pt
+gpu=1
+axis_calibration_steps=30
+total_training_steps=60
+residual_axis_scale=1.00
+component_correction_scale=1.00
+axis_gradient_aggregation=temporal_unit_direction
+component_gradient_aggregation=stage_consensus_direction
+===== ProxyDiff NB301 refinement DONE 2026-08-14 00:34:06 latest=run/budgeted_proxy_subset/correlation/nasbench301/cifar10/nwot/9000/20260814-003122_cifar10_1000_1_perturb =====
